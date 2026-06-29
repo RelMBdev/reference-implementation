@@ -13,3 +13,33 @@ cmake --build build --target bench-ccsd_bottlenecks
 
 Back-end: `tapp::cublas` if `TAPP_CUBLAS`, else `tapp::cutensor`. Add a benchmark
 by dropping a source file here and listing it in `CMakeLists.txt`.
+
+# How to run `benchmark.cu` script
+
+Toy script to run benchmarks for PP/PH contractions with the following arguments:
+- SEED: int
+- NOCC: int
+- NVIR: int
+- PHI (double): for generating the elements of tensors with the distribution `uniform(0,1) e^{phi}`
+- PREC_DIGITS (int): user-asked precision 
+- N_REP (int): number of times the contraction is repeated for timing
+- MODE (int): 0 for accuracy check/ 1 for timing only
+- DTYPE_LENGTH (int): 32 for C32/ 64 for C64
+- CONTRACTION (str): PP of PH
+
+Generating executables:
+```{shell}
+make cutensor
+make cublas
+```
+
+Running examples:
+```
+./cublas_benchmark 123 100 140 0.0 10 20 1 64 PP
+./cutensor_benchmark 123 100 140 0.0 10 20 1 64 PP
+```
+
+Note: you will need to:
+- modify the include/lib paths
+- add the lib paths to LD_LIBRARY_PATH env variable
+
