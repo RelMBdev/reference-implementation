@@ -1,0 +1,86 @@
++----------------+
+| PP CONTRACTION |
++----------------+
+NVIR = 100
+Starting benchmark with contraction PP
+PREC DIGITS = 12
+Setting up PP contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 312.660339 ms (average over 20 repetitions)
+NVIR = 140
+Starting benchmark with contraction PP
+PREC DIGITS = 12
+Setting up PP contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 1036.361450 ms (average over 20 repetitions)
+NVIR = 200
+Starting benchmark with contraction PP
+PREC DIGITS = 12
+Setting up PP contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 3981.696533 ms (average over 20 repetitions)
+NVIR = 282
+Starting benchmark with contraction PP
+PREC DIGITS = 12
+Setting up PP contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 20364.644531 ms (average over 20 repetitions)
+NVIR = 300
+Starting benchmark with contraction PP
+PREC DIGITS = 12
+Setting up PP contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 21211.609375 ms (average over 20 repetitions)
++----------------+
+| PH CONTRACTION |
++----------------+
+NVIR = 100
+Starting benchmark with contraction PH
+PREC DIGITS = 12
+Setting up PH contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 361.987335 ms (average over 20 repetitions)
+NVIR = 140
+Starting benchmark with contraction PH
+PREC DIGITS = 12
+Setting up PH contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 874.931946 ms (average over 20 repetitions)
+NVIR = 200
+Starting benchmark with contraction PH
+PREC DIGITS = 12
+Setting up PH contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 2295.685059 ms (average over 20 repetitions)
+NVIR = 282
+Starting benchmark with contraction PH
+PREC DIGITS = 12
+Setting up PH contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 5949.792969 ms (average over 20 repetitions)
+NVIR = 300
+Starting benchmark with contraction PH
+PREC DIGITS = 12
+Setting up PH contraction...
+Finished generating tensors
+Before TAPP tensor info
+Finished TAPP product
+Finished cuTENSOR product and it took 7059.227539 ms (average over 20 repetitions)

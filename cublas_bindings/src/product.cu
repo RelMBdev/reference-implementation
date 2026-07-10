@@ -518,8 +518,18 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
         // of decimal digits (variable mantissa size). bits = ceil(log2(10)*d).
         if (p->prec_digits > 0)
         {
-            cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);
-            cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);
+	    bool* TAPP_EMULATION_STRATEGY_PERFORMANT;
+	    TAPP_error error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_STRATEGY_PERFORMANT, (void**)&TAPP_EMULATION_STRATEGY_PERFORMANT);
+            if(*TAPP_EMULATION_STRATEGY_PERFORMANT)
+	    	{cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);}
+	    else
+	    	{ cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_EAGER);}
+
+	    bool* TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC;
+	    error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC, (void**)&TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC);
+            if(*TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC) {cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);}
+	    else{cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_FIXED);}
+
             int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
             cublasSetFixedPointEmulationMaxMantissaBitCount(cublas, bits);
         }

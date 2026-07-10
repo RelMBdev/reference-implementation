@@ -1,18 +1,20 @@
 cutensor: benchmark.cu                                                                                                               
 	nvcc benchmark.cu -o cutensor_benchmark \
-	   -I/lustre/home/extusers/udle1b776/devel/tapp/jan/reference-implementation/api/include/ \
-	   -L/lustre/home/extusers/udle1b776/devel/tapp/jan/reference-implementation/build_cutensor_cublas_tblis_emulated/cutensor_bindings \
+	   -I/lustre/work/pdl17866/shared/lee-maximee/reference-implementation/api/include/ \
+	   -L/lustre/work/pdl17866/shared/lee-maximee/reference-implementation/build/cutensor_bindings \
            -arch=sm_100 \
 	   -lcurand -lcublas -ltapp-cutensor -Xcompiler -fopenmp
 cublas_eager: benchmark.cu                                                                                                               
 	nvcc benchmark.cu -o cublas_eager_benchmark \
-	   -I/lustre/home/extusers/udle1b776/devel/tapp/jan/reference-implementation/api/include/ \
-	   -L/lustre/home/extusers/udle1b776/devel/tapp/jan/reference-implementation/build_cublas_emulated_eager/cublas_bindings \
+	   -I/lustre/work/pdl17866/shared/lee-maximee/reference-implementation/api/include/ \
+	   -L/lustre/work/pdl17866/shared/lee-maximee/reference-implementation/build/cublas_bindings \
            -arch=sm_100 \
 	   -lcurand -lcublas -ltapp-cublas -Xcompiler -fopenmp
 cublas: benchmark.cu                                                                                                               
-	nvcc benchmark.cu -o cublas_benchmark \
-	   -I/lustre/home/extusers/udle1b776/devel/tapp/jan/reference-implementation/api/include/ \
-	   -L/lustre/home/extusers/udle1b776/devel/tapp/jan/reference-implementation/build_cutensor_cublas_tblis_emulated/cublas_bindings \
+	nvcc benchmark.cu -o cublas_benchmark -DUSE_CUBLAS=1\
+	   -I/lustre/work/pdl17866/shared/lee-maximee/reference-implementation/api/include \
+	   -I/lustre/work/pdl17866/shared/lee-maximee/reference-implementation/cublas_bindings/include \
+	   -L/lustre/work/pdl17866/shared/lee-maximee/reference-implementation/build/cublas_bindings \
            -arch=sm_100 \
 	   -lcurand -lcublas -ltapp-cublas -Xcompiler -fopenmp
+all: cublas cublas_eager cutensor

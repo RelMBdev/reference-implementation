@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <tapp.h>
+#include <attributes.h>
 
 static void set_values(int64_t e[4], int64_t v1, int64_t v2, int64_t v3, int64_t v4)
 {
@@ -17,18 +18,54 @@ static void strides4(const int64_t e[4], int64_t s[4])
 
 
 template<typename T, typename TC>
-int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_DIGITS, int64_t N_REP, int MODE, const char* CONTRACTION){
+int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_DIGITS, int64_t N_REP, int MODE, const char* CONTRACTION, bool TAPP_EMULATION_STRATEGY_PERFORMANT, bool TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC, bool ONLY_REAL_PART){
 
     printf("Starting benchmark with contraction %s\n", CONTRACTION);
     static TAPP_prectype PREC = TAPP_DEFAULT_PREC;
 
     printf("PREC DIGITS = %d\n", PREC_DIGITS);
     switch(PREC_DIGITS){
+	    case 3:
+		    PREC = TAPP_C_3_DIGITS;
+		    break;
+	    case 4:
+		    PREC = TAPP_C_4_DIGITS;
+		    break;
 	    case 5:
 		    PREC = TAPP_C_5_DIGITS;
 		    break;
+	    case 6:
+		    PREC = TAPP_C_6_DIGITS;
+		    break;
+	    case 7:
+		    PREC = TAPP_C_7_DIGITS;
+		    break;
+	    case 8:
+		    PREC = TAPP_C_8_DIGITS;
+		    break;
+	    case 9:
+		    PREC = TAPP_C_9_DIGITS;
+		    break;
 	    case 10:
 		    PREC = TAPP_C_10_DIGITS;
+		    break;
+	    case 11:
+		    PREC = TAPP_C_11_DIGITS;
+		    break;
+	    case 12:
+		    PREC = TAPP_C_12_DIGITS;
+		    break;
+	    case 13:
+		    PREC = TAPP_C_13_DIGITS;
+		    break;
+	    case 14:
+		    PREC = TAPP_C_14_DIGITS;
+		    break;
+	    case 15:
+		    PREC = TAPP_C_15_DIGITS;
+		    break;
+	    case 16:
+		    PREC = TAPP_C_16_DIGITS;
 		    break;
 	    case 20:
 		    PREC = TAPP_C_20_DIGITS;
@@ -113,12 +150,23 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     CUDA_CHECK(cudaMalloc(&devC, nC * sizeof(TC)));
     CUDA_CHECK(cudaMalloc(&devD, nD * sizeof(TC)));
 
-    generate_random_matrix<T,TC>((TC*) devA, nA, PHI, SEED);
-    generate_random_matrix<T,TC>((TC*) devB, nB, PHI, SEED+1);
+    generate_random_matrix<T,TC>((TC*) devA, nA, PHI, SEED, ONLY_REAL_PART);
+    generate_random_matrix<T,TC>((TC*) devB, nB, PHI, SEED+1, ONLY_REAL_PART);
     printf("Finished generating tensors\n");
 
     // GPU Result with TAPP and given backend
     TAPP_handle handle; TAPP_create_handle(&handle);
+#if USE_CUBLAS
+    TAPP_error error = TAPP_attr_set(
+		    handle, 
+		    ATTR_KEY_EMULATION_STRATEGY_PERFORMANT,  
+		   (void*) &TAPP_EMULATION_STRATEGY_PERFORMANT); // CuBLAS specific attribute
+    error = TAPP_attr_set(
+		    handle, 
+		    ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC,  
+		    (void*) &TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC); // CuBLAS specific attribute
+#endif
+    printf("Before TAPP tensor info\n");
     TAPP_tensor_info Ainfo, Binfo, Cinfo, Dinfo;
     TAPP_create_tensor_info(&Ainfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eA, sA);
     TAPP_create_tensor_info(&Binfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eB, sB);
@@ -281,9 +329,17 @@ int main(int argc, char const* argv[])
     const int MODE = std::stoi(argv[7]);
     const int64_t DTYPE_LENGTH = std::stoi(argv[8]);
     const char* CONTRACTION = argv[9];
+    const int TAPP_EMULATION_STRATEGY_PERFORMANT_INT = std::stoi(argv[10]);
+    const int TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC_INT = std::stoi(argv[11]);
+    const int ONLY_REAL_PART_INT = std::stoi(argv[12]);
 
-    if(DTYPE_LENGTH==32) return run_benchmark<float, cuComplex> (SEED, NOCC, NVIR, static_cast<float>(PHI), PREC_DIGITS, N_REP, MODE, CONTRACTION);
-    if(DTYPE_LENGTH==64) return run_benchmark<double, cuDoubleComplex>(SEED, NOCC, NVIR, PHI, PREC_DIGITS, N_REP, MODE, CONTRACTION);
+    const bool TAPP_EMULATION_STRATEGY_PERFORMANT = TAPP_EMULATION_STRATEGY_PERFORMANT_INT==1;
+    const bool TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC = TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC_INT==1;
+    const bool ONLY_REAL_PART = ONLY_REAL_PART_INT==1;
+
+    if(DTYPE_LENGTH==32) return run_benchmark<float, cuComplex> (SEED, NOCC, NVIR, static_cast<float>(PHI), PREC_DIGITS, N_REP, MODE, CONTRACTION, TAPP_EMULATION_STRATEGY_PERFORMANT, TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC, ONLY_REAL_PART);
+    if(DTYPE_LENGTH==64) return run_benchmark<double, cuDoubleComplex>(SEED, NOCC, NVIR, PHI, PREC_DIGITS, N_REP, MODE, CONTRACTION, 
+		    TAPP_EMULATION_STRATEGY_PERFORMANT, TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC, ONLY_REAL_PART);
     return 1;
 }
 

@@ -26,6 +26,9 @@ Toy script to run benchmarks for PP/PH contractions with the following arguments
 - MODE (int): 0 for accuracy check/ 1 for timing only
 - DTYPE_LENGTH (int): 32 for C32/ 64 for C64
 - CONTRACTION (str): PP of PH
+- EMULATION_STRAT_PERFORMANT (int): 0 for EAGER, 1 for PERFORMANT
+- EMULATION_MANTISSA (int): 0 for FIXED, 1 for DYNAMIC
+- ONLY_REAL_PART (int): 1 for ONLY_REAL_PART, 0 for generating general complex numbers
 
 Generating executables:
 ```{shell}
@@ -35,8 +38,8 @@ make cublas
 
 Running examples:
 ```
-./cublas_benchmark 123 100 140 0.0 10 20 1 64 PP
-./cutensor_benchmark 123 100 140 0.0 10 20 1 64 PP
+./cublas_benchmark 123 100 140 0.0 10 20 1 64 PP 0 0 1
+./cutensor_benchmark 123 100 140 0.0 10 20 1 64 PP 1 1 0
 ```
 
 Note: you will need to:

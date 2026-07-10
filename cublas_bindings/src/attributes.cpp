@@ -6,6 +6,8 @@ static size_t attr_size(TAPP_key key)
     switch (key)
     {
     case ATTR_KEY_USE_DEVICE_MEMORY: return sizeof(bool);
+    case ATTR_KEY_EMULATION_STRATEGY_PERFORMANT: return sizeof(bool);
+    case ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC: return sizeof(bool);
     default:                         return 0;
     }
 }

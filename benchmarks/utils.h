@@ -59,7 +59,7 @@
 
 // Generate random matrices with cuRAND according to this paper: 10.48550/arXiv.2306.11975
 template<typename T, typename TC>
-void generate_random_matrix(TC* devA, size_t sizeA, T phi, int seed){
+void generate_random_matrix(TC* devA, size_t sizeA, T phi, int seed, bool ONLY_REAL_PART){
 	
     curandGenerator_t gen;
     CURAND_CHECK(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));
@@ -76,6 +76,14 @@ void generate_random_matrix(TC* devA, size_t sizeA, T phi, int seed){
     T factor = static_cast<T>(std::exp(phi));
     if constexpr (sizeof(T)==sizeof(float)) CUBLAS_CHECK(cublasSscal(handle, 2*sizeA, &factor, (float*) devA, 1));
     if constexpr (sizeof(T)==sizeof(double)) CUBLAS_CHECK(cublasDscal(handle, 2*sizeA, &factor, (double*) devA, 1));
+
+    if(ONLY_REAL_PART){
+	factor = (T) 0.0;
+    	if constexpr (sizeof(T)==sizeof(float)) CUBLAS_CHECK(
+			cublasSscal(handle, sizeA, &factor, ((float*) devA) +1, 2));
+    	if constexpr (sizeof(T)==sizeof(double)) CUBLAS_CHECK(
+			cublasDscal(handle, sizeA, &factor, ((double*) devA) +1, 2));
+    }
 
     CUBLAS_CHECK(cublasDestroy(handle));
 }

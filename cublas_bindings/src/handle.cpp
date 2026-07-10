@@ -12,6 +12,8 @@ TAPP_error TAPP_create_handle(TAPP_handle* handle)
     }
     handle_struct->attributes = new intptr_t[ATTR_COUNT];
     handle_struct->attributes[ATTR_KEY_USE_DEVICE_MEMORY] = (intptr_t) new bool(true);
+    handle_struct->attributes[ATTR_KEY_EMULATION_STRATEGY_PERFORMANT] = (intptr_t) new bool(true);
+    handle_struct->attributes[ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC] = (intptr_t) new bool(true);
     *handle = (TAPP_handle) handle_struct;
     return TAPP_SUCCESS;
 }
@@ -21,6 +23,8 @@ TAPP_error TAPP_destroy_handle(TAPP_handle handle)
     struct handle* handle_struct = (struct handle*) handle;
     cublasStatus_t stat = cublasDestroy(handle_struct->cublas);
     delete (bool*)handle_struct->attributes[ATTR_KEY_USE_DEVICE_MEMORY];
+    delete (bool*)handle_struct->attributes[ATTR_KEY_EMULATION_STRATEGY_PERFORMANT];
+    delete (bool*)handle_struct->attributes[ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC];
     delete[] handle_struct->attributes;
     delete handle_struct;
     if (stat != CUBLAS_STATUS_SUCCESS) return tapp_error(stat);
