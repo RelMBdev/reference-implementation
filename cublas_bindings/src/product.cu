@@ -458,6 +458,11 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
 #if OZAKI_EMULATION_VERSION==1
     p->prec_digits = tapp_prec_digits(prec);
 #endif
+#if OZAKI_EMULATION_VERSION==2
+    int* NUM_GEMM;
+    TAPP_error error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_NUM_GEMM, (void**)&NUM_GEMM);
+    p->num_gemm = *NUM_GEMM;
+#endif
 
     int rankA = A_info->nmode;
     int rankB = B_info->nmode;
