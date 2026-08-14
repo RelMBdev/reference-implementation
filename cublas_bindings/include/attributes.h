@@ -3,14 +3,14 @@
 
 #include <tapp/attributes.h>
 
-#include <cublas_v2.h>
 #include <cstring>
 
 #include "handle.h"
 
 #define ATTR_KEY_USE_DEVICE_MEMORY 0
-#define ATTR_KEY_EMULATION_STRATEGY_PERFORMANT 1
-#define ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC 2
-#define ATTR_COUNT 3
+#define ATTR_KEY_EMULATION_STRATEGY 1
+#define ATTR_KEY_EMULATION_MANTISSA_CONTROL 2
+#define ATTR_KEY_EMULATION_NUM_GEMM 3
+#define ATTR_COUNT 4
 
 #endif /* TAPP_REF_IMPL_CUBLAS_BINDINGS_ATTRIBUTES_H_ */
