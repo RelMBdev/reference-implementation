@@ -8,6 +8,7 @@ static size_t attr_size(TAPP_key key)
     case ATTR_KEY_USE_DEVICE_MEMORY: return sizeof(bool);
     case ATTR_KEY_EMULATION_STRATEGY_PERFORMANT: return sizeof(bool);
     case ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC: return sizeof(bool);
+    case ATTR_KEY_EMULATION_NUM_GEMM: return sizeof(int);
     default:                         return 0;
     }
 }
@@ -37,6 +38,15 @@ TAPP_error TAPP_attr_clear(TAPP_attr attr, TAPP_key key)
     {
     case ATTR_KEY_USE_DEVICE_MEMORY:
         *(bool*)handle_struct->attributes[key] = false;
+        break;
+    case ATTR_KEY_EMULATION_STRATEGY_PERFORMANT:
+        *(bool*)handle_struct->attributes[key] = false;
+        break;
+    case ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC:
+        *(bool*)handle_struct->attributes[key] = false;
+        break;
+    case ATTR_KEY_EMULATION_NUM_GEMM:
+        *(int*)handle_struct->attributes[key] = 0;
         break;
     default:
         return tapp_error(TAPP_ERROR_TYPE_TAPP, TAPP_ERR_INVALID_KEY);

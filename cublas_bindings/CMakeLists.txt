@@ -61,9 +61,9 @@ target_sources(tapp-cublas
 
 set_target_properties(tapp-cublas PROPERTIES
   POSITION_INDEPENDENT_CODE ON
-  CXX_STANDARD 17
+  CXX_STANDARD 20
   CXX_STANDARD_REQUIRED YES
-  CUDA_STANDARD 17
+  CUDA_STANDARD 20
   CUDA_STANDARD_REQUIRED YES
 )
 
@@ -82,6 +82,7 @@ target_include_directories(tapp-cublas
 )
 
 if(TAPP_OZAKI_EMULATION_VERSION STREQUAL "2")
+   target_compile_definitions(tapp-cublas PRIVATE OZAKI_II_COMPUTE_CAPABILITY=${OZAKI_II_COMPUTE_CAPABILITY})
    target_link_libraries(tapp-cublas
      PUBLIC
        tapp::api

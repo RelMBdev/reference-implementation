@@ -21,4 +21,6 @@ cudaDataType get_cuda_datatype(TAPP_datatype type);
 
 size_t sizeof_datatype(TAPP_datatype type);
 
+bool is_complex(TAPP_datatype type);
+
 #endif /* TAPP_REF_IMPL_CUBLAS_BINDINGS_DATATYPE_H_ */
