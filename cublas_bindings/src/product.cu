@@ -5,6 +5,9 @@
 #include <cuComplex.h>
 #include <cutt.h>
 #include <cuda_runtime.h>
+#if OZAKI_EMULATION_VERSION==2
+#include <gemmul8.hpp>
+#endif
 
 #if OZAKI_EMULATION_VERSION==2
 #include <complex>
@@ -713,14 +716,14 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
         // of decimal digits (variable mantissa size). bits = ceil(log2(10)*d).
         if (p->prec_digits > 0)
         {
-	        bool* TAPP_EMULATION_STRATEGY_PERFORMANT;
-	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_STRATEGY_PERFORMANT, (void**)&TAPP_EMULATION_STRATEGY_PERFORMANT);
-           if(*TAPP_EMULATION_STRATEGY_PERFORMANT) {cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);}
+	        int* TAPP_EMULATION_STRATEGY;
+	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_STRATEGY, (void**)&TAPP_EMULATION_STRATEGY);
+           if(*TAPP_EMULATION_STRATEGY == TAPP_EMULATION_STRATEGY_PERFORMANT) {cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);}
 	        else { cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_EAGER);}
 
-	        bool* TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC;
-	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC, (void**)&TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC);
-           if(*TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC) {cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);}
+	        int* TAPP_EMULATION_MANTISSA_CONTROL;
+	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL, (void**)&TAPP_EMULATION_MANTISSA_CONTROL);
+           if(*TAPP_EMULATION_MANTISSA_CONTROL == TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC) {cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);}
 	        else{cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_FIXED);}
 
             int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
