@@ -137,6 +137,28 @@ enum
     TAPP_C_34_DIGITS = 2034,
 };
 
+/* Types used for Ozaki-I scheme:
+ * - cuBLAS emulation strategy: eager vs performant
+ * - cuBLAS emulation mantissa: dynamic vs fixed
+ */
+typedef int TAPP_EMULATION_STRATEGY;
+
+enum
+{
+    TAPP_EMULATION_STRATEGY_PERFORMANT,
+    TAPP_EMULATION_STRATEGY_EAGER,
+    TAPP_DEFAULT_EMULATION_STRATEGY = TAPP_EMULATION_STRATEGY_PERFORMANT,
+};
+
+typedef int TAPP_EMULATION_MANTISSA_CONTROL;
+
+enum
+{
+    TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC,
+    TAPP_EMULATION_MANTISSA_CONTROL_FIXED,
+    TAPP_DEFAULT_EMULATION_MANTISSA_CONTROL = TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC,
+};
+
 /* Type used for Ozaki-II scheme. It dictates the number of splits, which is also equal to the number of executed GEMMs.
  * There are not clear relation between the number of splits and the accuracy of the GEMM.
  */
