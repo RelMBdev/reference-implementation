@@ -289,6 +289,12 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     	return 0;
     }
 
+    // Warmup
+    for(int i=0;i<10;i++){
+        TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD);
+    }
+    cudaDeviceSynchronize();
+
     // Timings
     cudaEvent_t start, stop;
     CUDA_CHECK(cudaEventCreate(&start));
@@ -298,7 +304,6 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
 
     for(int i=0;i<N_REP;i++){
         TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD); // warm-up
-        cudaDeviceSynchronize();
     }
 
     CUDA_CHECK(cudaEventRecord(stop, 0));
