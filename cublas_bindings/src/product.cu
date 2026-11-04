@@ -266,7 +266,7 @@ void dispatch_gemmul8(
     std::visit([&]<typename typeC>(
       std::type_identity<typeC>) {
 // Ozaki-II doesnt not have support for FP8 on H100
-#if OZAKI_II_COMPUTE_CAPABILITY!=90
+#if OZAKI_II_COMPUTE_CAPABILITY>90
          if constexpr(true) gemmul8::gemm<typeC, BACKEND>(
            cublas,
            transa, transb,
@@ -711,9 +711,9 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
         TAPP_error error;
 
 #if OZAKI_EMULATION_VERSION!=2
-#if OZAKI_EMULATION_VERSION==1
         // Configure cuBLAS fixed-point FP64 emulation for the requested number
         // of decimal digits (variable mantissa size). bits = ceil(log2(10)*d).
+#if OZAKI_EMULATION_VERSION==1
         if (p->prec_digits > 0)
         {
 	        int* TAPP_EMULATION_STRATEGY;
