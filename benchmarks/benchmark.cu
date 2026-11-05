@@ -25,6 +25,9 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
 
     printf("PREC DIGITS = %d\n", PREC_DIGITS);
     switch(PREC_DIGITS){
+       case -1:
+          PREC = TAPP_CUTENSOR_C64_8XINT8_EMULATION;
+          break;
 	    case 3:
 		    PREC = TAPP_C_3_DIGITS;
 		    break;
@@ -195,13 +198,37 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     TAPP_create_tensor_info(&Cinfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eD, sD);
     TAPP_create_tensor_info(&Dinfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eD, sD);
 
+    TAPP_error error;
+    int message_len;
+    char *message_buff;
+
+    printf("Before TAPP tensor product\n");
     TAPP_tensor_product plan;
-    TAPP_create_tensor_product(&plan, handle,
+    error = TAPP_create_tensor_product(&plan, handle,
         TAPP_IDENTITY, Ainfo, iA, TAPP_IDENTITY, Binfo, iB,
         TAPP_IDENTITY, Cinfo, iC, TAPP_IDENTITY, Dinfo, iD, PREC);
+    if(!TAPP_check_success(error)){
+        printf(TAPP_check_success(error) ? "Success\n" : "Fail\n");
+        message_len = TAPP_explain_error(error, 0, NULL);
+        message_buff = (char*) malloc((message_len + 1) * sizeof(char));
+        TAPP_explain_error(error, message_len + 1, message_buff);
+        if(!TAPP_check_success(error)) printf(message_buff);
+       return 1;
+    }
 
-    TAPP_executor exec; TAPP_create_executor(&exec);
+    printf("Before TAPP executor\n");
+    TAPP_executor exec; 
+    error = TAPP_create_executor(&exec);
+    if(!TAPP_check_success(error)){
+        printf(TAPP_check_success(error) ? "Success\n" : "Fail\n");
+        message_len = TAPP_explain_error(error, 0, NULL);
+        message_buff = (char*) malloc((message_len + 1) * sizeof(char));
+        TAPP_explain_error(error, message_len + 1, message_buff);
+        if(!TAPP_check_success(error)) printf(message_buff);
+       return 1;
+    }
     TAPP_status status;
+    printf("Before TAPP execute product\n");
     TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD); // warm-up
     cudaDeviceSynchronize();
 
