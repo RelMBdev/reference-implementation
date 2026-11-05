@@ -87,10 +87,10 @@ if(TAPP_OZAKI_EMULATION_VERSION STREQUAL "2")
      PUBLIC
        tapp::api
      PRIVATE
+       OZAKI_II
        CUDA::cudart
        CUDA::cublas
        cutt
-       OZAKI_II
    )
 else()
    target_link_libraries(tapp-cublas

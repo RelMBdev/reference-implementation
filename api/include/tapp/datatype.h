@@ -93,6 +93,10 @@ enum
     /* bfloat16 with wide accumulation */
     TAPP_BF16BF16_ACCUM_F32 = 6,
 
+    /* cuTENSOR int8 emulation types */
+    TAPP_CUTENSOR_F64_8XINT8_EMULATION = 7,
+    TAPP_CUTENSOR_C64_8XINT8_EMULATION = 8,
+
     /*
      * Variable-precision compute types for fixed-point / Ozaki-style FP64
      * emulation (e.g. cuBLAS emulated fixed-point, or a dedicated Ozaki
