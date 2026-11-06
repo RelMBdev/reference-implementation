@@ -316,7 +316,7 @@ void dispatch_gemmul8(
     std::visit([&]<typename typeC>(
       std::type_identity<typeC>) {
 // Ozaki-II doesnt not have support for FP8 on H100
-#if OZAKI_II_COMPUTE_CAPABILITY>90
+#if OZAKI_II_COMPUTE_CAPABILITY>1000000
          if constexpr(true) gemmul8::gemm<typeC, BACKEND>(
            cublas,
            transa, transb,
@@ -506,10 +506,7 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
     // count is only consumed when built with EMULATION (CUDA >= 13) - otherwise
     // it stays 0 and the GEMM runs in plain FP64. The digits->mantissa-bits
     // conversion happens at execute.
-    p->prec_digits = 0;
-#if OZAKI_EMULATION_VERSION==1
     p->prec_digits = tapp_prec_digits(prec);
-#endif
 
     int rankA = A_info->nmode;
     int rankB = B_info->nmode;
@@ -787,7 +784,7 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
         if (p->prec_digits > 0)
         {
            int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
-           for(const auto& [num_moduli, effective_bits]){
+           for(const auto& [num_moduli, effective_bits]: OS_II_INT8_table){
               if(effective_bits>=bits){
                  TAPP_EMULATION_NUM_GEMM = num_moduli;  
                  break;
