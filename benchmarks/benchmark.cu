@@ -25,6 +25,9 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
 
     printf("PREC DIGITS = %d\n", PREC_DIGITS);
     switch(PREC_DIGITS){
+       case -1:
+          PREC = TAPP_CUTENSOR_C64_8XINT8_EMULATION;
+          break;
 	    case 3:
 		    PREC = TAPP_C_3_DIGITS;
 		    break;
@@ -157,36 +160,31 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     // GPU Result with TAPP and given backend
     TAPP_handle handle; TAPP_create_handle(&handle);
 #if USE_CUBLAS
-    if(EMULATION_STRATEGY_PERFORMANT){
-       printf("EMULATION_STRATEGY_PERFORMANT\n");
-       int value = TAPP_EMULATION_STRATEGY_PERFORMANT;
-       TAPP_error error = TAPP_attr_set(
-   		    handle, 
-   		    ATTR_KEY_EMULATION_STRATEGY,  
-   		   (void*) &value); // CuBLAS specific attribute
-    }else{
-       printf("EMULATION_STRATEGY_EAGER\n");
-       int value = TAPP_EMULATION_STRATEGY_EAGER;
-       TAPP_error error = TAPP_attr_set(
-   		    handle, 
-   		    ATTR_KEY_EMULATION_STRATEGY,  
-   		   (void*) &value); // CuBLAS specific attribute
+    // Resolve values with function-level scope (guaranteed lifetime)
+    int strategy_val = EMULATION_STRATEGY_PERFORMANT
+        ? TAPP_EMULATION_STRATEGY_PERFORMANT
+        : TAPP_EMULATION_STRATEGY_EAGER;
+    
+    if (EMULATION_STRATEGY_PERFORMANT) {
+        printf("EMULATION_STRATEGY_PERFORMANT\n");
+    } else {
+        printf("EMULATION_STRATEGY_EAGER\n");
     }
-    if(EMULATION_MANTISSA_CONTROL_DYNAMIC){
-       printf("EMULATION_MANTISSA_CONTROL_DYNAMIC\n");
-       int value = TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC;
-       TAPP_error error = TAPP_attr_set(
-		    handle, 
-		    ATTR_KEY_EMULATION_MANTISSA_CONTROL,  
-		    (void*) &value); // CuBLAS specific attribute
-    }else{ 
-       printf("EMULATION_MANTISSA_CONTROL_FIXED\n");
-       int value = TAPP_EMULATION_MANTISSA_CONTROL_FIXED;
-       TAPP_error error = TAPP_attr_set(
-		    handle, 
-		    ATTR_KEY_EMULATION_MANTISSA_CONTROL,  
-		    (void*) &value); // CuBLAS specific attribute
+    
+    TAPP_error err1 = TAPP_attr_set(handle, ATTR_KEY_EMULATION_STRATEGY, &strategy_val);
+    
+    
+    int mantissa_val = EMULATION_MANTISSA_CONTROL_DYNAMIC
+        ? TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC
+        : TAPP_EMULATION_MANTISSA_CONTROL_FIXED;
+    
+    if (EMULATION_MANTISSA_CONTROL_DYNAMIC) {
+        printf("EMULATION_MANTISSA_CONTROL_DYNAMIC\n");
+    } else {
+        printf("EMULATION_MANTISSA_CONTROL_FIXED\n");
     }
+    
+    TAPP_error err2 = TAPP_attr_set(handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL, &mantissa_val);
 #endif
     printf("Before TAPP tensor info\n");
     TAPP_tensor_info Ainfo, Binfo, Cinfo, Dinfo;
@@ -195,13 +193,37 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     TAPP_create_tensor_info(&Cinfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eD, sD);
     TAPP_create_tensor_info(&Dinfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eD, sD);
 
+    TAPP_error error;
+    int message_len;
+    char *message_buff;
+
+    printf("Before TAPP tensor product\n");
     TAPP_tensor_product plan;
-    TAPP_create_tensor_product(&plan, handle,
+    error = TAPP_create_tensor_product(&plan, handle,
         TAPP_IDENTITY, Ainfo, iA, TAPP_IDENTITY, Binfo, iB,
         TAPP_IDENTITY, Cinfo, iC, TAPP_IDENTITY, Dinfo, iD, PREC);
+    if(!TAPP_check_success(error)){
+        printf(TAPP_check_success(error) ? "Success\n" : "Fail\n");
+        message_len = TAPP_explain_error(error, 0, NULL);
+        message_buff = (char*) malloc((message_len + 1) * sizeof(char));
+        TAPP_explain_error(error, message_len + 1, message_buff);
+        if(!TAPP_check_success(error)) printf(message_buff);
+       return 1;
+    }
 
-    TAPP_executor exec; TAPP_create_executor(&exec);
+    printf("Before TAPP executor\n");
+    TAPP_executor exec; 
+    error = TAPP_create_executor(&exec);
+    if(!TAPP_check_success(error)){
+        printf(TAPP_check_success(error) ? "Success\n" : "Fail\n");
+        message_len = TAPP_explain_error(error, 0, NULL);
+        message_buff = (char*) malloc((message_len + 1) * sizeof(char));
+        TAPP_explain_error(error, message_len + 1, message_buff);
+        if(!TAPP_check_success(error)) printf(message_buff);
+       return 1;
+    }
     TAPP_status status;
+    printf("Before TAPP execute product\n");
     TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD); // warm-up
     cudaDeviceSynchronize();
 

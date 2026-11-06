@@ -10,6 +10,7 @@
 cutensorDataType_t translate_datatype(TAPP_datatype type);
 
 cutensorComputeDescriptor_t translate_prectype(TAPP_prectype prec, TAPP_datatype datatype);
+cutensorComputeDescriptor_t translate_prectype_permutation(TAPP_prectype prec, TAPP_datatype datatype);
 
 size_t sizeof_datatype(TAPP_datatype type);
 
