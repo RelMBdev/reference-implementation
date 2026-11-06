@@ -22,8 +22,58 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <map>
 #include <unordered_map>
 #include <vector>
+
+/* The number of GEMM in OS-II is related to the number of GEMM according to recommandations in README this repo: 
+* https://github.com/RIKEN-RCCS/GEMMul8
+* 30b5b5d01e96c0e4a490396d5a806e86bcc36581
+* formatted as effective bits / number of low-precision real matrix multiplications.
+*
+* num_moduli 	INT8-Real 	INT8-Complex 	FP8-Real 	FP8-Complex
+* 2 	          7 / 2 	      7 / 4 	    13 / 5 	     12 / 10
+* 3 	          11 / 3 	      11 / 6 	    18 / 7 	     16 / 15
+* 4 	          15 / 4 	      15 / 8 	    23 / 9 	     22 / 21
+* 5 	          19 / 5 	      19 / 10 	    28 / 11 	  27 / 28
+* 6 	          23 / 6 	      23 / 12 	    34 / 14 	  32 / 34
+* 7 	          27 / 7 	      27 / 14 	    39 / 17 	  35 / 37
+* 8 	          31 / 8 	      30 / 16 	    44 / 20 	  40 / 43
+* 9 	          35 / 9 	      34 / 18 	    48 / 22 	  46 / 49
+* 10 	          39 / 10 	   38 / 20 	    53 / 25 	  51 / 55
+* 11 	          43 / 11 	   41 / 22 	    58 / 28 	  56 / 61
+* 12 	          47 / 12 	   45 / 24 	    63 / 31 	  61 / 67
+* 13 	          51 / 13 	   48 / 26 	    68 / 34 	  66 / 73
+* 14 	          55 / 14 	   52 / 28 	    73 / 37 	  70 / 78
+* 15 	          58 / 15 	   55 / 30 	    78 / 40 	  75 / 84
+* 16 	          62 / 16 	   58 / 32 	    84 / 43 	  80 / 90
+* 17 	          66 / 17 	   62 / 34 	    89 / 46 	  85 / 96
+* 18 	          70 / 18 	   65 / 36 	    94 / 49 	  90 / 102
+* 19 	          73 / 19 	   68 / 38 	    99 / 52 	  95 / 108
+* 20 	          77 / 20 	   71 / 40 	    102 / 54 	  100 / 114
+*/
+
+std::map<int,int> OS_II_INT8_table = {
+   {2 , 7 },
+   {3 , 11},
+   {4 , 15},
+   {5 , 19},
+   {6 , 23},
+   {7 , 27},
+   {8 , 31},
+   {9 , 35},
+   {10, 39},
+   {11, 43},
+   {12, 47},
+   {13, 51},
+   {14, 55},
+   {15, 58},
+   {16, 62},
+   {17, 66},
+   {18, 70},
+   {19, 73},
+   {20, 77},
+};
 
 // ===========================================================================
 // CUDA / cuTT error checks. Unlike the upstream my-ttgt macros these throw
@@ -457,14 +507,8 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
     // it stays 0 and the GEMM runs in plain FP64. The digits->mantissa-bits
     // conversion happens at execute.
     p->prec_digits = 0;
-    p->num_gemm = TAPP_DEFAULT_NUM_GEMM;
 #if OZAKI_EMULATION_VERSION==1
     p->prec_digits = tapp_prec_digits(prec);
-#endif
-#if OZAKI_EMULATION_VERSION==2
-    int* NUM_GEMM;
-    TAPP_error error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_NUM_GEMM, (void**)&NUM_GEMM);
-    p->num_gemm = *NUM_GEMM;
 #endif
 
     int rankA = A_info->nmode;
@@ -739,8 +783,18 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
         if (stat != CUBLAS_STATUS_SUCCESS) throw std::runtime_error("cublasGemmEx failed");
 #else
         // Configure Ozaki-II fixed-point FP64 emulation
-        int* TAPP_EMULATION_NUM_GEMM; 
-	     error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_NUM_GEMM, (void**)&TAPP_EMULATION_NUM_GEMM);
+        int TAPP_EMULATION_NUM_GEMM = 16;  
+        if (p->prec_digits > 0)
+        {
+           int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
+           for(const auto& [num_moduli, effective_bits]){
+              if(effective_bits>=bits){
+                 TAPP_EMULATION_NUM_GEMM = num_moduli;  
+                 break;
+              }
+           }
+        }
+
         const bool fastmode = false;
         const bool enable_skip_scalA = false;
         const bool enable_skip_scalB = false;
@@ -757,7 +811,7 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
              p->m, 
              p->n, 
              p->k, 
-             *TAPP_EMULATION_NUM_GEMM,
+             TAPP_EMULATION_NUM_GEMM,
              enable_skip_scalA, enable_skip_scalB, &worksizeA, &worksizeB);
         }
         else{
@@ -765,7 +819,7 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
              p->m, 
              p->n, 
              p->k, 
-             *TAPP_EMULATION_NUM_GEMM,
+             TAPP_EMULATION_NUM_GEMM,
              enable_skip_scalA, enable_skip_scalB, &worksizeA, &worksizeB);
         }
 
@@ -800,7 +854,7 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
            alpha, p->transposeA? devAT: A_d, p->lda,
            p->transposeB? devBT: B_d, p->ldb,
            zero, devCT, p->ldc,
-           *TAPP_EMULATION_NUM_GEMM, fastmode, (void*)work_rem, (void*)workA, (void*)workB,
+           TAPP_EMULATION_NUM_GEMM, fastmode, (void*)work_rem, (void*)workA, (void*)workB,
            enable_skip_scalA, enable_skip_scalB, skip_scalA, skip_scalB
         );
 
