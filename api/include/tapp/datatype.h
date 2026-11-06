@@ -93,6 +93,10 @@ enum
     /* bfloat16 with wide accumulation */
     TAPP_BF16BF16_ACCUM_F32 = 6,
 
+    /* cuTENSOR int8 emulation types */
+    TAPP_CUTENSOR_F64_8XINT8_EMULATION = 7,
+    TAPP_CUTENSOR_C64_8XINT8_EMULATION = 8,
+
     /*
      * Variable-precision compute types for fixed-point / Ozaki-style FP64
      * emulation (e.g. cuBLAS emulated fixed-point, or a dedicated Ozaki
@@ -135,6 +139,28 @@ enum
     TAPP_C_16_DIGITS = 2016,
     TAPP_C_20_DIGITS = 2020,
     TAPP_C_34_DIGITS = 2034,
+};
+
+/* Types used for Ozaki-I scheme:
+ * - cuBLAS emulation strategy: eager vs performant
+ * - cuBLAS emulation mantissa: dynamic vs fixed
+ */
+typedef int TAPP_EMULATION_STRATEGY;
+
+enum
+{
+    TAPP_EMULATION_STRATEGY_PERFORMANT,
+    TAPP_EMULATION_STRATEGY_EAGER,
+    TAPP_DEFAULT_EMULATION_STRATEGY = TAPP_EMULATION_STRATEGY_PERFORMANT,
+};
+
+typedef int TAPP_EMULATION_MANTISSA_CONTROL;
+
+enum
+{
+    TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC,
+    TAPP_EMULATION_MANTISSA_CONTROL_FIXED,
+    TAPP_DEFAULT_EMULATION_MANTISSA_CONTROL = TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC,
 };
 
 #endif /* TAPP_DATATYPE_H_ */

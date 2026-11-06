@@ -18,13 +18,16 @@ static void strides4(const int64_t e[4], int64_t s[4])
 
 
 template<typename T, typename TC>
-int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_DIGITS, int64_t N_REP, int MODE, const char* CONTRACTION, bool TAPP_EMULATION_STRATEGY_PERFORMANT, bool TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC, bool ONLY_REAL_PART){
+int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_DIGITS, int64_t N_REP, int MODE, const char* CONTRACTION, bool EMULATION_STRATEGY_PERFORMANT, bool EMULATION_MANTISSA_CONTROL_DYNAMIC, bool ONLY_REAL_PART){
 
     printf("Starting benchmark with contraction %s\n", CONTRACTION);
     static TAPP_prectype PREC = TAPP_DEFAULT_PREC;
 
     printf("PREC DIGITS = %d\n", PREC_DIGITS);
     switch(PREC_DIGITS){
+       case -1:
+          PREC = TAPP_CUTENSOR_C64_8XINT8_EMULATION;
+          break;
 	    case 3:
 		    PREC = TAPP_C_3_DIGITS;
 		    break;
@@ -157,14 +160,31 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     // GPU Result with TAPP and given backend
     TAPP_handle handle; TAPP_create_handle(&handle);
 #if USE_CUBLAS
-    TAPP_error error = TAPP_attr_set(
-		    handle, 
-		    ATTR_KEY_EMULATION_STRATEGY_PERFORMANT,  
-		   (void*) &TAPP_EMULATION_STRATEGY_PERFORMANT); // CuBLAS specific attribute
-    error = TAPP_attr_set(
-		    handle, 
-		    ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC,  
-		    (void*) &TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC); // CuBLAS specific attribute
+    // Resolve values with function-level scope (guaranteed lifetime)
+    int strategy_val = EMULATION_STRATEGY_PERFORMANT
+        ? TAPP_EMULATION_STRATEGY_PERFORMANT
+        : TAPP_EMULATION_STRATEGY_EAGER;
+    
+    if (EMULATION_STRATEGY_PERFORMANT) {
+        printf("EMULATION_STRATEGY_PERFORMANT\n");
+    } else {
+        printf("EMULATION_STRATEGY_EAGER\n");
+    }
+    
+    TAPP_error err1 = TAPP_attr_set(handle, ATTR_KEY_EMULATION_STRATEGY, &strategy_val);
+    
+    
+    int mantissa_val = EMULATION_MANTISSA_CONTROL_DYNAMIC
+        ? TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC
+        : TAPP_EMULATION_MANTISSA_CONTROL_FIXED;
+    
+    if (EMULATION_MANTISSA_CONTROL_DYNAMIC) {
+        printf("EMULATION_MANTISSA_CONTROL_DYNAMIC\n");
+    } else {
+        printf("EMULATION_MANTISSA_CONTROL_FIXED\n");
+    }
+    
+    TAPP_error err2 = TAPP_attr_set(handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL, &mantissa_val);
 #endif
     printf("Before TAPP tensor info\n");
     TAPP_tensor_info Ainfo, Binfo, Cinfo, Dinfo;
@@ -173,13 +193,37 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     TAPP_create_tensor_info(&Cinfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eD, sD);
     TAPP_create_tensor_info(&Dinfo, handle, (sizeof(T)==sizeof(float))? TAPP_C32 : TAPP_C64, 4, eD, sD);
 
+    TAPP_error error;
+    int message_len;
+    char *message_buff;
+
+    printf("Before TAPP tensor product\n");
     TAPP_tensor_product plan;
-    TAPP_create_tensor_product(&plan, handle,
+    error = TAPP_create_tensor_product(&plan, handle,
         TAPP_IDENTITY, Ainfo, iA, TAPP_IDENTITY, Binfo, iB,
         TAPP_IDENTITY, Cinfo, iC, TAPP_IDENTITY, Dinfo, iD, PREC);
+    if(!TAPP_check_success(error)){
+        printf(TAPP_check_success(error) ? "Success\n" : "Fail\n");
+        message_len = TAPP_explain_error(error, 0, NULL);
+        message_buff = (char*) malloc((message_len + 1) * sizeof(char));
+        TAPP_explain_error(error, message_len + 1, message_buff);
+        if(!TAPP_check_success(error)) printf(message_buff);
+       return 1;
+    }
 
-    TAPP_executor exec; TAPP_create_executor(&exec);
+    printf("Before TAPP executor\n");
+    TAPP_executor exec; 
+    error = TAPP_create_executor(&exec);
+    if(!TAPP_check_success(error)){
+        printf(TAPP_check_success(error) ? "Success\n" : "Fail\n");
+        message_len = TAPP_explain_error(error, 0, NULL);
+        message_buff = (char*) malloc((message_len + 1) * sizeof(char));
+        TAPP_explain_error(error, message_len + 1, message_buff);
+        if(!TAPP_check_success(error)) printf(message_buff);
+       return 1;
+    }
     TAPP_status status;
+    printf("Before TAPP execute product\n");
     TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD); // warm-up
     cudaDeviceSynchronize();
 
@@ -289,6 +333,12 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     	return 0;
     }
 
+    // Warmup
+    for(int i=0;i<10;i++){
+        TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD);
+    }
+    cudaDeviceSynchronize();
+
     // Timings
     cudaEvent_t start, stop;
     CUDA_CHECK(cudaEventCreate(&start));
@@ -298,7 +348,6 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
 
     for(int i=0;i<N_REP;i++){
         TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD); // warm-up
-        cudaDeviceSynchronize();
     }
 
     CUDA_CHECK(cudaEventRecord(stop, 0));
@@ -329,17 +378,17 @@ int main(int argc, char const* argv[])
     const int MODE = std::stoi(argv[7]);
     const int64_t DTYPE_LENGTH = std::stoi(argv[8]);
     const char* CONTRACTION = argv[9];
-    const int TAPP_EMULATION_STRATEGY_PERFORMANT_INT = std::stoi(argv[10]);
-    const int TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC_INT = std::stoi(argv[11]);
+    const int EMULATION_STRATEGY_PERFORMANT_INT = std::stoi(argv[10]);
+    const int EMULATION_MANTISSA_CONTROL_DYNAMIC_INT = std::stoi(argv[11]);
     const int ONLY_REAL_PART_INT = std::stoi(argv[12]);
 
-    const bool TAPP_EMULATION_STRATEGY_PERFORMANT = TAPP_EMULATION_STRATEGY_PERFORMANT_INT==1;
-    const bool TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC = TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC_INT==1;
+    const bool EMULATION_STRATEGY_PERFORMANT = EMULATION_STRATEGY_PERFORMANT_INT==1;
+    const bool EMULATION_MANTISSA_CONTROL_DYNAMIC = EMULATION_MANTISSA_CONTROL_DYNAMIC_INT==1;
     const bool ONLY_REAL_PART = ONLY_REAL_PART_INT==1;
 
-    if(DTYPE_LENGTH==32) return run_benchmark<float, cuComplex> (SEED, NOCC, NVIR, static_cast<float>(PHI), PREC_DIGITS, N_REP, MODE, CONTRACTION, TAPP_EMULATION_STRATEGY_PERFORMANT, TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC, ONLY_REAL_PART);
+    if(DTYPE_LENGTH==32) return run_benchmark<float, cuComplex> (SEED, NOCC, NVIR, static_cast<float>(PHI), PREC_DIGITS, N_REP, MODE, CONTRACTION, EMULATION_STRATEGY_PERFORMANT, EMULATION_MANTISSA_CONTROL_DYNAMIC, ONLY_REAL_PART);
     if(DTYPE_LENGTH==64) return run_benchmark<double, cuDoubleComplex>(SEED, NOCC, NVIR, PHI, PREC_DIGITS, N_REP, MODE, CONTRACTION, 
-		    TAPP_EMULATION_STRATEGY_PERFORMANT, TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC, ONLY_REAL_PART);
+		    EMULATION_STRATEGY_PERFORMANT, EMULATION_MANTISSA_CONTROL_DYNAMIC, ONLY_REAL_PART);
     return 1;
 }
 

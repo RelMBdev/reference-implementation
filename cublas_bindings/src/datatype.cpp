@@ -15,7 +15,7 @@ cublasComputeType_t translate_prectype(TAPP_prectype prec, TAPP_datatype datatyp
     // plain FP64, i.e. full precision ignoring the requested digit reduction.
     if (tapp_prec_digits(prec) > 0)
     {
-#if EMULATION
+#if OZAKI_EMULATION_VERSION==1
         return CUBLAS_COMPUTE_64F_EMULATED_FIXEDPOINT;
 #else
         return CUBLAS_COMPUTE_64F;
@@ -76,5 +76,22 @@ size_t sizeof_datatype(TAPP_datatype type)
         return sizeof(std::complex<double>);
     default:
         return sizeof(float);
+    }
+}
+
+bool is_complex(TAPP_datatype type)
+{
+    switch (type)
+    {
+    case TAPP_F32:
+        return false;
+    case TAPP_F64:
+        return false;
+    case TAPP_C32:
+        return true;
+    case TAPP_C64:
+        return true;
+    default:
+        return false;
     }
 }

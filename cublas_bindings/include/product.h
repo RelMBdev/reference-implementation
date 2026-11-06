@@ -37,7 +37,7 @@ struct product_plan
     cublasComputeType_t compute_type;
 
     // Requested decimal digits of precision for cuBLAS fixed-point FP64
-    // emulation (0 = emulation off). Only meaningful when built with EMULATION
+    // emulation (0 = emulation off). Only meaningful when built with OZAKI_EMULATION_VERSION=1
     // and for F64/C64 outputs; converted to a max mantissa bit count at execute.
     int prec_digits;
 

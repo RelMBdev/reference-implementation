@@ -5,6 +5,16 @@
 #include <cuComplex.h>
 #include <cutt.h>
 #include <cuda_runtime.h>
+#if OZAKI_EMULATION_VERSION==2
+#include <gemmul8.hpp>
+#endif
+
+#if OZAKI_EMULATION_VERSION==2
+#include <complex>
+#include <gemmul8.hpp>
+#include <type_traits>
+#include <variant>
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -12,8 +22,58 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <map>
 #include <unordered_map>
 #include <vector>
+
+/* The number of GEMM in OS-II is related to the number of GEMM according to recommandations in README this repo: 
+* https://github.com/RIKEN-RCCS/GEMMul8
+* 30b5b5d01e96c0e4a490396d5a806e86bcc36581
+* formatted as effective bits / number of low-precision real matrix multiplications.
+*
+* num_moduli 	INT8-Real 	INT8-Complex 	FP8-Real 	FP8-Complex
+* 2 	          7 / 2 	      7 / 4 	    13 / 5 	     12 / 10
+* 3 	          11 / 3 	      11 / 6 	    18 / 7 	     16 / 15
+* 4 	          15 / 4 	      15 / 8 	    23 / 9 	     22 / 21
+* 5 	          19 / 5 	      19 / 10 	    28 / 11 	  27 / 28
+* 6 	          23 / 6 	      23 / 12 	    34 / 14 	  32 / 34
+* 7 	          27 / 7 	      27 / 14 	    39 / 17 	  35 / 37
+* 8 	          31 / 8 	      30 / 16 	    44 / 20 	  40 / 43
+* 9 	          35 / 9 	      34 / 18 	    48 / 22 	  46 / 49
+* 10 	          39 / 10 	   38 / 20 	    53 / 25 	  51 / 55
+* 11 	          43 / 11 	   41 / 22 	    58 / 28 	  56 / 61
+* 12 	          47 / 12 	   45 / 24 	    63 / 31 	  61 / 67
+* 13 	          51 / 13 	   48 / 26 	    68 / 34 	  66 / 73
+* 14 	          55 / 14 	   52 / 28 	    73 / 37 	  70 / 78
+* 15 	          58 / 15 	   55 / 30 	    78 / 40 	  75 / 84
+* 16 	          62 / 16 	   58 / 32 	    84 / 43 	  80 / 90
+* 17 	          66 / 17 	   62 / 34 	    89 / 46 	  85 / 96
+* 18 	          70 / 18 	   65 / 36 	    94 / 49 	  90 / 102
+* 19 	          73 / 19 	   68 / 38 	    99 / 52 	  95 / 108
+* 20 	          77 / 20 	   71 / 40 	    102 / 54 	  100 / 114
+*/
+
+std::map<int,int> OS_II_INT8_table = {
+   {2 , 7 },
+   {3 , 11},
+   {4 , 15},
+   {5 , 19},
+   {6 , 23},
+   {7 , 27},
+   {8 , 31},
+   {9 , 35},
+   {10, 39},
+   {11, 43},
+   {12, 47},
+   {13, 51},
+   {14, 55},
+   {15, 58},
+   {16, 62},
+   {17, 66},
+   {18, 70},
+   {19, 73},
+   {20, 77},
+};
 
 // ===========================================================================
 // CUDA / cuTT error checks. Unlike the upstream my-ttgt macros these throw
@@ -203,6 +263,181 @@ static bool scalar_is_nonzero(const void* storage, TAPP_datatype type)
 }
 
 // ===========================================================================
+// Dispatch pattern for interfacing with Ozaki-II project
+// The underlying GEMM assumes for simplicity that CUBLAS_OP = CUBLAS_OP_N for A and B.
+// During the Nvidia Idris-Hackathlon (2026), we identified cuBLAS GEMM as the bottleneck.
+// So the previous assumption is not a big performance loss.
+// ===========================================================================
+#if OZAKI_EMULATION_VERSION==2
+using CudaTypeVar = std::variant<
+    std::type_identity<float>,
+    std::type_identity<double>,
+    std::type_identity<cuComplex>,
+    std::type_identity<cuDoubleComplex>,
+>;
+
+CudaTypeVar get_cpp_datatype(TAPP_datatype dtype) {
+    switch (dtype) {
+        case TAPP_F32: return std::type_identity<float>{};
+        case TAPP_F64: return std::type_identity<double>{};
+        case TAPP_C32: return std::type_identity<cuComplex>{};
+        case TAPP_C64: return std::type_identity<cuDoubleComplex>{};
+    }
+    throw std::runtime_error("Unsuported value");
+}
+
+template <gemmul8::Backend BACKEND>
+void dispatch_gemmul8(
+           cublasHandle_t cublas,
+           CudaTypeVar typeC, 
+           cublasOperation_t transa,
+           cublasOperation_t transb,
+           size_t m, 
+           size_t n, 
+           size_t k,
+           const void* alpha, 
+           const void* A_d, 
+           size_t lda,
+           const void* B_d, 
+           size_t ldb,
+           const void* zero, 
+           void* devCT, 
+           size_t ldc,
+           int num_moduli, 
+           bool fastmode, 
+           void* work_rem, 
+           void* workA, 
+           void* workB,
+           bool enable_skip_scalA, 
+           bool enable_skip_scalB, 
+           bool skip_scalA, 
+           bool skip_scalB)
+{
+    std::visit([&]<typename typeC>(
+      std::type_identity<typeC>) {
+// Ozaki-II doesnt not have support for FP8 on H100
+#if OZAKI_II_COMPUTE_CAPABILITY>1000000
+         if constexpr(true) gemmul8::gemm<typeC, BACKEND>(
+           cublas,
+           transa, transb,
+           m, n, k,
+           (typeC*) alpha, (typeC*) A_d, lda,
+           (typeC*) B_d, ldb, (typeC*) zero,
+           (typeC*) devCT, ldc,
+           num_moduli,
+           fastmode, work_rem, workA, workB, enable_skip_scalA, enable_skip_scalB,
+           skip_scalA, skip_scalB
+        );
+#else
+         if (BACKEND==gemmul8::Backend::INT8){
+           gemmul8::gemm<typeC, BACKEND>(
+              cublas,
+              transa, transb,
+              m, n, k,
+              (typeC*) alpha, (typeC*) A_d, lda,
+              (typeC*) B_d, ldb, (typeC*) zero,
+              (typeC*) devCT, ldc,
+              num_moduli,
+              fastmode, work_rem, workA, workB, enable_skip_scalA, enable_skip_scalB,
+              skip_scalA, skip_scalB
+           );
+           return;
+         }
+         throw std::runtime_error("No implementation of Ozaki-II wityh FP8 support on H100 (compute capability 90)");
+#endif
+    }, typeC);
+}
+
+void dispatch_gemmul8(
+           cublasHandle_t cublas,
+           CudaTypeVar typeC, 
+           const gemmul8::Backend BACKEND,
+           cublasOperation_t transa,
+           cublasOperation_t transb,
+           size_t m, 
+           size_t n, 
+           size_t k,
+           const void* alpha, 
+           const void* A_d, 
+           size_t lda,
+           const void* B_d, 
+           size_t ldb,
+           const void* zero, 
+           void* devCT, 
+           size_t ldc,
+           int num_moduli, 
+           bool fastmode, 
+           void* work_rem, 
+           void* workA, 
+           void* workB,
+           bool enable_skip_scalA, 
+           bool enable_skip_scalB, 
+           bool skip_scalA, 
+           bool skip_scalB)
+{
+    switch(BACKEND){
+       case gemmul8::Backend::INT8:
+           dispatch_gemmul8<gemmul8::Backend::INT8>(
+              cublas,
+              typeC, 
+              transa,
+              transb,
+              m, 
+              n, 
+              k,
+              alpha, 
+              A_d, 
+              lda,
+              B_d, 
+              ldb,
+              zero, 
+              devCT, 
+              ldc,
+              num_moduli, 
+              fastmode, 
+              work_rem, 
+              workA, 
+              workB,
+              enable_skip_scalA, 
+              enable_skip_scalB, 
+              skip_scalA, 
+              skip_scalB
+          );
+          break;
+       case gemmul8::Backend::FP8:
+           dispatch_gemmul8<gemmul8::Backend::FP8>(
+              cublas,
+              typeC, 
+              transa,
+              transb,
+              m, 
+              n, 
+              k,
+              alpha, 
+              A_d, 
+              lda,
+              B_d, 
+              ldb,
+              zero, 
+              devCT, 
+              ldc,
+              num_moduli, 
+              fastmode, 
+              work_rem, 
+              workA, 
+              workB,
+              enable_skip_scalA, 
+              enable_skip_scalB, 
+              skip_scalA, 
+              skip_scalB
+          );
+          break;
+    }
+}
+
+#endif
+
+// ===========================================================================
 // Plan creation: the TTGT "optimize" step, computing the transpose plans and
 // GEMM configuration from the TAPP tensor descriptors and index strings.
 // ===========================================================================
@@ -220,7 +455,8 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
                                       TAPP_element_op op_D,
                                       TAPP_tensor_info D,
                                       const int64_t* idx_D,
-                                      TAPP_prectype prec)
+                                      TAPP_prectype prec
+                                      )
 {
     (void)idx_C;
     struct tensor_info* A_info = (struct tensor_info*)A;
@@ -270,10 +506,7 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
     // count is only consumed when built with EMULATION (CUDA >= 13) - otherwise
     // it stays 0 and the GEMM runs in plain FP64. The digits->mantissa-bits
     // conversion happens at execute.
-    p->prec_digits = 0;
-#if EMULATION
     p->prec_digits = tapp_prec_digits(prec);
-#endif
 
     int rankA = A_info->nmode;
     int rankB = B_info->nmode;
@@ -513,36 +746,117 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
 
         cuda_check(cudaMalloc(&devCT, bytes_D));
 
-#if EMULATION
+        unsigned char zero[16];
+        make_scalar(tD, 0.0, zero);
+        cublasStatus_t stat;
+        TAPP_error error;
+
+#if OZAKI_EMULATION_VERSION!=2
         // Configure cuBLAS fixed-point FP64 emulation for the requested number
         // of decimal digits (variable mantissa size). bits = ceil(log2(10)*d).
+#if OZAKI_EMULATION_VERSION==1
         if (p->prec_digits > 0)
         {
-	    bool* TAPP_EMULATION_STRATEGY_PERFORMANT;
-	    TAPP_error error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_STRATEGY_PERFORMANT, (void**)&TAPP_EMULATION_STRATEGY_PERFORMANT);
-            if(*TAPP_EMULATION_STRATEGY_PERFORMANT)
-	    	{cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);}
-	    else
-	    	{ cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_EAGER);}
+	        int* TAPP_EMULATION_STRATEGY;
+	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_STRATEGY, (void**)&TAPP_EMULATION_STRATEGY);
+           if(*TAPP_EMULATION_STRATEGY == TAPP_EMULATION_STRATEGY_PERFORMANT) {cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);}
+	        else { cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_EAGER);}
 
-	    bool* TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC;
-	    error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC, (void**)&TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC);
-            if(*TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC) {cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);}
-	    else{cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_FIXED);}
+	        int* TAPP_EMULATION_MANTISSA_CONTROL;
+	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL, (void**)&TAPP_EMULATION_MANTISSA_CONTROL);
+           if(*TAPP_EMULATION_MANTISSA_CONTROL == TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC) {cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);}
+	        else{cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_FIXED);}
 
             int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
             cublasSetFixedPointEmulationMaxMantissaBitCount(cublas, bits);
         }
 #endif
 
-        unsigned char zero[16];
-        make_scalar(tD, 0.0, zero);
-        cublasStatus_t stat = cublasGemmEx(
+        stat = cublasGemmEx(
             cublas, p->transa, p->transb, p->m, p->n, p->k,
             alpha, p->transposeA ? devAT : A_d, get_cuda_datatype(p->type_A), p->lda,
             p->transposeB ? devBT : B_d, get_cuda_datatype(p->type_B), p->ldb,
             zero, devCT, get_cuda_datatype(tD), p->ldc, p->compute_type, CUBLAS_GEMM_DEFAULT);
         if (stat != CUBLAS_STATUS_SUCCESS) throw std::runtime_error("cublasGemmEx failed");
+#else
+        // Configure Ozaki-II fixed-point FP64 emulation
+        int TAPP_EMULATION_NUM_GEMM = 16;  
+        if (p->prec_digits > 0)
+        {
+           int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
+           for(const auto& [num_moduli, effective_bits]: OS_II_INT8_table){
+              if(effective_bits>=bits){
+                 TAPP_EMULATION_NUM_GEMM = num_moduli;  
+                 break;
+              }
+           }
+        }
+
+        const bool fastmode = false;
+        const bool enable_skip_scalA = false;
+        const bool enable_skip_scalB = false;
+        const bool skip_scalA = false;
+        const bool skip_scalB = false;
+        // TODO: add support for FP8
+        const gemmul8::Backend BACKEND = gemmul8::Backend::INT8;
+
+        // Estimate size and create workspace 
+        size_t worksizeA, worksizeB;
+        size_t worksize;
+        if(is_complex(p->type_A) or is_complex(p->type_B) or is_complex(p->type_D)){
+          worksize = gemmul8::workSize<true, BACKEND, gemmul8::Func::gemm>(
+             p->m, 
+             p->n, 
+             p->k, 
+             TAPP_EMULATION_NUM_GEMM,
+             enable_skip_scalA, enable_skip_scalB, &worksizeA, &worksizeB);
+        }
+        else{
+          worksize = gemmul8::workSize<false, BACKEND, gemmul8::Func::gemm>(
+             p->m, 
+             p->n, 
+             p->k, 
+             TAPP_EMULATION_NUM_GEMM,
+             enable_skip_scalA, enable_skip_scalB, &worksizeA, &worksizeB);
+        }
+
+        void *work;
+        cudaMalloc(&work, worksize);
+   
+        const size_t offsetA = worksizeA;
+        const size_t offsetB = worksizeB;
+        
+        int8_t *workA    = reinterpret_cast<int8_t *>(work);
+        int8_t *workB    = workA + offsetA;                 
+        int8_t *work_rem = workB + offsetB;
+        
+        // Dispatch Ozaki-II GEMM
+        TAPP_prectype typeA = p->type_A;
+        TAPP_prectype typeB = p->type_B;
+        TAPP_prectype typeC = p->type_D;
+
+        if(
+            not(
+                typeA==typeB and 
+                typeA==typeC and 
+                typeC==typeB
+            )
+        ) throw std::runtime_error("Ozaki-II does not support tensors of different datatype");
+        dispatch_gemmul8(
+           cublas,
+           get_cpp_datatype(typeC), 
+           BACKEND,
+           p->transa, p->transb,
+           p->m, p->n, p->k,
+           alpha, p->transposeA? devAT: A_d, p->lda,
+           p->transposeB? devBT: B_d, p->ldb,
+           zero, devCT, p->ldc,
+           TAPP_EMULATION_NUM_GEMM, fastmode, (void*)work_rem, (void*)workA, (void*)workB,
+           enable_skip_scalA, enable_skip_scalB, skip_scalA, skip_scalB
+        );
+
+        cudaFree(work);
+#endif
 
         if (p->transposeA) { cuda_check(cudaFree(devAT)); devAT = nullptr; }
         if (p->transposeB) { cuda_check(cudaFree(devBT)); devBT = nullptr; }
