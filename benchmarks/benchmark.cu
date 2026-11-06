@@ -160,36 +160,31 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     // GPU Result with TAPP and given backend
     TAPP_handle handle; TAPP_create_handle(&handle);
 #if USE_CUBLAS
-    if(EMULATION_STRATEGY_PERFORMANT){
-       printf("EMULATION_STRATEGY_PERFORMANT\n");
-       int value = TAPP_EMULATION_STRATEGY_PERFORMANT;
-       TAPP_error error = TAPP_attr_set(
-   		    handle, 
-   		    ATTR_KEY_EMULATION_STRATEGY,  
-   		   (void*) &value); // CuBLAS specific attribute
-    }else{
-       printf("EMULATION_STRATEGY_EAGER\n");
-       int value = TAPP_EMULATION_STRATEGY_EAGER;
-       TAPP_error error = TAPP_attr_set(
-   		    handle, 
-   		    ATTR_KEY_EMULATION_STRATEGY,  
-   		   (void*) &value); // CuBLAS specific attribute
+    // Resolve values with function-level scope (guaranteed lifetime)
+    int strategy_val = EMULATION_STRATEGY_PERFORMANT
+        ? TAPP_EMULATION_STRATEGY_PERFORMANT
+        : TAPP_EMULATION_STRATEGY_EAGER;
+    
+    if (EMULATION_STRATEGY_PERFORMANT) {
+        printf("EMULATION_STRATEGY_PERFORMANT\n");
+    } else {
+        printf("EMULATION_STRATEGY_EAGER\n");
     }
-    if(EMULATION_MANTISSA_CONTROL_DYNAMIC){
-       printf("EMULATION_MANTISSA_CONTROL_DYNAMIC\n");
-       int value = TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC;
-       TAPP_error error = TAPP_attr_set(
-		    handle, 
-		    ATTR_KEY_EMULATION_MANTISSA_CONTROL,  
-		    (void*) &value); // CuBLAS specific attribute
-    }else{ 
-       printf("EMULATION_MANTISSA_CONTROL_FIXED\n");
-       int value = TAPP_EMULATION_MANTISSA_CONTROL_FIXED;
-       TAPP_error error = TAPP_attr_set(
-		    handle, 
-		    ATTR_KEY_EMULATION_MANTISSA_CONTROL,  
-		    (void*) &value); // CuBLAS specific attribute
+    
+    TAPP_error err1 = TAPP_attr_set(handle, ATTR_KEY_EMULATION_STRATEGY, &strategy_val);
+    
+    
+    int mantissa_val = EMULATION_MANTISSA_CONTROL_DYNAMIC
+        ? TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC
+        : TAPP_EMULATION_MANTISSA_CONTROL_FIXED;
+    
+    if (EMULATION_MANTISSA_CONTROL_DYNAMIC) {
+        printf("EMULATION_MANTISSA_CONTROL_DYNAMIC\n");
+    } else {
+        printf("EMULATION_MANTISSA_CONTROL_FIXED\n");
     }
+    
+    TAPP_error err2 = TAPP_attr_set(handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL, &mantissa_val);
 #endif
     printf("Before TAPP tensor info\n");
     TAPP_tensor_info Ainfo, Binfo, Cinfo, Dinfo;
