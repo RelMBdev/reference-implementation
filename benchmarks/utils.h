@@ -7,6 +7,7 @@
 #include <cuda_runtime.h>
 #include <curand.h>
 #include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
 #include <thrust/inner_product.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
@@ -23,6 +24,17 @@
 #include <iostream>
 #include <cublas_v2.h>
 #include <complex>
+#include <cutensor.h>
+
+#define CUTENSOR_CHECK(x) do { \
+    cutensorStatus_t err = x; \
+    if (err != CUTENSOR_STATUS_SUCCESS) { \
+        std::cerr << "cuTENSOR Error at " << __FILE__ << ":" << __LINE__ \
+                  << " -> Status Code: " << err \
+	          << "\nMessage : " <<  cutensorGetErrorString(err) << std::endl; \
+        exit(EXIT_FAILURE); \
+    } \
+} while(0)
 
 //For cuRAND Host API calls (curandCreateGenerator, etc.)
 #define CURAND_CHECK(x) do { \
@@ -74,11 +86,11 @@ __global__ void elemwise_mul_kernel(T* d_out, const T* d_in, size_t n) {
     }
 }
 
-/**
+/*
  * Generates random tensors with distribution: random(-1, 1) * exp(phi * gaussian(0, 1))
  * Supports both real and complex types (via template parameters T and TC).
  */
-template <typename T, typename TC>
+template <typename T=double, typename TC=cuDoubleComplex>
 void generate_random_matrix(TC* devA, size_t sizeA, T phi, int seed, bool ONLY_REAL_PART = false) {
     // Total scalar elements (accounts for real/imag pairs if TC is a complex type)
     size_t total_elements = sizeof(TC) > sizeof(T) ? 2 * sizeA : sizeA;
@@ -167,17 +179,29 @@ struct max_rel_error_op {
     }
 };
 
-template <typename T>
-T get_max_relative_error(T* d_A, T* d_B, size_t num_elements) {
-    thrust::device_ptr<T> ptr_A(d_A);
+template <typename T=double>
+T get_max_relative_error(double* d_A, T* d_B, size_t num_elements) {
+    thrust::device_ptr<double> ptr_A(d_A);
     thrust::device_ptr<T> ptr_B(d_B);
 
-    T max_relative_error = thrust::inner_product(
-        ptr_A, ptr_A + num_elements,
+    thrust::device_vector<double> ptr_B_double(num_elements);
+
+    thrust::transform(
+        thrust::device,
         ptr_B,
+        ptr_B + num_elements,
+        ptr_B_double.begin(),
+        [] __device__ (T val) {
+            return static_cast<double>(val);
+        }
+    );
+
+    double max_relative_error = thrust::inner_product(
+        ptr_A, ptr_A + num_elements,
+        ptr_B_double.begin(),
         0.0,                          // Initial value for maximum
-        thrust::maximum<T>(),     // Finds the highest one
-        max_rel_error_op<T>()           // Calculates relative error per element
+        thrust::maximum<double>(),     // Finds the highest one
+        max_rel_error_op<double>()           // Calculates relative error per element
     );
 
     return max_relative_error;
@@ -190,20 +214,69 @@ struct max_abs_error_op {
     }
 };
 
-template <typename T>
-T get_max_absolute_error(T* d_A, T* d_B, size_t num_elements) {
-    thrust::device_ptr<T> ptr_A(d_A);
+template <typename T=double>
+T get_max_absolute_error(double* d_A, T* d_B, size_t num_elements) {
+    thrust::device_ptr<double> ptr_A(d_A);
     thrust::device_ptr<T> ptr_B(d_B);
 
-    T max_absolute_error = thrust::inner_product(
-        ptr_A, ptr_A + num_elements,
+    thrust::device_vector<double> ptr_B_double(num_elements);
+
+    thrust::transform(
+        thrust::device,
         ptr_B,
+        ptr_B + num_elements,
+        ptr_B_double.begin(),
+        [] __device__ (T val) {
+            return static_cast<double>(val);
+        }
+    );
+
+
+    double max_absolute_error = thrust::inner_product(
+        ptr_A, ptr_A + num_elements,
+        ptr_B_double.begin(),
         0.0,                          // Initial value for maximum
-        thrust::maximum<T>(),     // Finds the highest one
-        max_abs_error_op<T>()           // Calculates absolute error per element
+        thrust::maximum<double>(),     // Finds the highest one
+        max_abs_error_op<double>()           // Calculates absolute error per element
     );
 
     return max_absolute_error;
+}
+
+inline void complex_double_to_float(const cuDoubleComplex* devA, cuComplex* devA_T, size_t nA) {
+    thrust::device_ptr<const cuDoubleComplex> ptr_A(devA);
+    thrust::device_ptr<cuComplex> ptr_A_T(devA_T);
+
+    thrust::transform(
+        thrust::device,
+        ptr_A,
+        ptr_A + nA,
+        ptr_A_T,
+        [] __device__ (cuDoubleComplex val) {
+            return make_cuComplex(
+                static_cast<float>(val.x),
+                static_cast<float>(val.y)
+            );
+        }
+    );
+}
+
+inline void complex_float_to_double(const cuComplex* devA, cuDoubleComplex* devA_T, size_t nA) {
+    thrust::device_ptr<const cuComplex> ptr_A(devA);
+    thrust::device_ptr<cuDoubleComplex> ptr_A_double(devA_T);
+
+    thrust::transform(
+        thrust::device,
+        ptr_A,
+        ptr_A + nA,
+        ptr_A_double,
+        [] __device__ (cuComplex val) {
+            return make_cuDoubleComplex(
+                static_cast<double>(val.x),
+                static_cast<double>(val.y)
+            );
+        }
+    );
 }
 
 #endif

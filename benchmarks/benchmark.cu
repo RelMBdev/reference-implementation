@@ -2,6 +2,8 @@
 #include <tapp.h>
 #include <attributes.h>
 
+const uint32_t ALIGNMENT_REQUIREMENT = 128;
+
 static void set_values(int64_t e[4], int64_t v1, int64_t v2, int64_t v3, int64_t v4)
 {
 	e[0] = v1;
@@ -18,7 +20,7 @@ static void strides4(const int64_t e[4], int64_t s[4])
 
 
 template<typename T, typename TC>
-int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_DIGITS, int64_t N_REP, int MODE, const char* CONTRACTION, bool EMULATION_STRATEGY_PERFORMANT, bool EMULATION_MANTISSA_CONTROL_DYNAMIC, bool ONLY_REAL_PART){
+int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, double PHI, int64_t PREC_DIGITS, int64_t N_REP, int MODE, const char* CONTRACTION, bool EMULATION_STRATEGY_PERFORMANT, bool EMULATION_MANTISSA_CONTROL_DYNAMIC, bool ONLY_REAL_PART){
 
     printf("Starting benchmark with contraction %s\n", CONTRACTION);
     static TAPP_prectype PREC = TAPP_DEFAULT_PREC;
@@ -80,16 +82,18 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
 		    printf("PREC type not available\n");
     }
 
-    TC ALPHA;
-    TC BETA;
+    TC ALPHA_T;
+    TC BETA_T;
+    cuDoubleComplex ALPHA = make_cuDoubleComplex(1.0, 0.0);
+    cuDoubleComplex BETA = make_cuDoubleComplex(0.0, 0.0);
 
     if constexpr (sizeof(T)==sizeof(float)){
-	    ALPHA = make_cuComplex(1.0, 0.0);
-	    BETA = make_cuComplex(0.0, 0.0);
+	    ALPHA_T = make_cuComplex(1.0, 0.0);
+	    BETA_T = make_cuComplex(0.0, 0.0);
     }
     if constexpr (sizeof(T)==sizeof(double)){
-	    ALPHA = make_cuDoubleComplex(1.0, 0.0);
-	    BETA = make_cuDoubleComplex(0.0, 0.0);
+	    ALPHA_T = make_cuDoubleComplex(1.0, 0.0);
+	    BETA_T = make_cuDoubleComplex(0.0, 0.0);
     }
 
     int64_t nA, nB, nC, nD;
@@ -146,15 +150,31 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
     int64_t sA[4], sB[4], sD[4];
     strides4(eA, sA); strides4(eB, sB); strides4(eD, sD);
 
-    // Generate Random matrices
-    void *devA, *devB, *devC, *devD;
-    CUDA_CHECK(cudaMalloc(&devA, nA * sizeof(TC)));
-    CUDA_CHECK(cudaMalloc(&devB, nB * sizeof(TC)));
-    CUDA_CHECK(cudaMalloc(&devC, nC * sizeof(TC)));
-    CUDA_CHECK(cudaMalloc(&devD, nD * sizeof(TC)));
+    // Generate Random matrices in double precision then downcast in if needed
+    void *devA, *devB, *devD, *devC = nullptr;
+    CUDA_CHECK(cudaMalloc(&devA, nA * sizeof(cuDoubleComplex)));
+    CUDA_CHECK(cudaMalloc(&devB, nB * sizeof(cuDoubleComplex)));
+    CUDA_CHECK(cudaMalloc(&devC, nC * sizeof(cuDoubleComplex)));
+    CUDA_CHECK(cudaMalloc(&devD, nD * sizeof(cuDoubleComplex)));
 
-    generate_random_matrix<T,TC>((TC*) devA, nA, PHI, SEED, ONLY_REAL_PART);
-    generate_random_matrix<T,TC>((TC*) devB, nB, PHI, SEED+1, ONLY_REAL_PART);
+    generate_random_matrix((cuDoubleComplex*) devA, nA, PHI, SEED, ONLY_REAL_PART);
+    generate_random_matrix((cuDoubleComplex*) devB, nB, PHI, SEED+1, ONLY_REAL_PART);
+
+    void *devA_T, *devB_T, *devD_T, *devC_T = nullptr;
+    if constexpr (sizeof(T)==sizeof(float)){
+            CUDA_CHECK(cudaMalloc(&devA_T, nA * sizeof(cuComplex)));
+            CUDA_CHECK(cudaMalloc(&devB_T, nB * sizeof(cuComplex)));
+            CUDA_CHECK(cudaMalloc(&devD_T, nD * sizeof(cuComplex)));
+
+	    complex_double_to_float((const cuDoubleComplex *) devA, (cuComplex *) devA_T, nA);
+	    complex_double_to_float((const cuDoubleComplex *) devB, (cuComplex *) devB_T, nB);
+    }
+    if constexpr (sizeof(T)==sizeof(double)){
+	    devA_T = devA;
+	    devB_T = devB;
+	    devC_T = devC;
+	    devD_T = devD;
+    }
     printf("Finished generating tensors\n");
 
     // GPU Result with TAPP and given backend
@@ -220,109 +240,162 @@ int run_benchmark(int64_t SEED, int64_t NOCC, int64_t NVIR, T PHI, int64_t PREC_
         message_buff = (char*) malloc((message_len + 1) * sizeof(char));
         TAPP_explain_error(error, message_len + 1, message_buff);
         if(!TAPP_check_success(error)) printf(message_buff);
+	
        return 1;
     }
     TAPP_status status;
     printf("Before TAPP execute product\n");
-    TAPP_execute_product(plan, exec, &status, &ALPHA, devA, devB, &BETA, devC, devD); // warm-up
+    TAPP_execute_product(plan, exec, &status, &ALPHA_T, devA_T, devB_T, &BETA_T, devC_T, devD_T); // warm-up
     cudaDeviceSynchronize();
+    if constexpr (sizeof(T)==sizeof(float)){
+            complex_float_to_double((const cuComplex *) devD_T, (cuDoubleComplex *)devD, nD);
+            CUDA_CHECK(cudaFree(devA_T));
+            CUDA_CHECK(cudaFree(devB_T));
+            CUDA_CHECK(cudaFree(devD_T));
+    }
 
     printf("Finished TAPP product\n");
 
     if(MODE==0){
-    	// Comparison with CPU reference with Error metrics
-    	TC* A = nullptr;
-    	TC* B = nullptr;
-    	TC* C = nullptr;
-    	TC* D = nullptr;
+    	// Comparison with emulated cuTENSOR C64 reference with Error metrics
+	cutensorHandle_t cutensor_handle;
+	CUTENSOR_CHECK(cutensorCreate(&cutensor_handle));
 
-    	CUDA_CHECK(cudaMallocHost(&A, nA * sizeof(TC)));
-    	CUDA_CHECK(cudaMallocHost(&B, nB * sizeof(TC)));
-    	CUDA_CHECK(cudaMallocHost(&C, nD * sizeof(TC)));
-    	CUDA_CHECK(cudaMallocHost(&D, nD * sizeof(TC)));
+        cutensorTensorDescriptor_t descA;
+        CUTENSOR_CHECK(cutensorCreateTensorDescriptor(
+            cutensor_handle,
+            &descA,
+            4,
+            eA,
+            sA,
+            CUDA_C_64F,
+            ALIGNMENT_REQUIREMENT
+        ));
 
-    	CUDA_CHECK(cudaMemcpy(A, devA, nA * sizeof(TC), cudaMemcpyDeviceToHost));
-    	CUDA_CHECK(cudaMemcpy(B, devB, nB * sizeof(TC), cudaMemcpyDeviceToHost));
-    	CUDA_CHECK(cudaMemcpy(D, devD, nD * sizeof(TC), cudaMemcpyDeviceToHost));
+        cutensorTensorDescriptor_t descB;
+	CUTENSOR_CHECK(cutensorCreateTensorDescriptor(
+            cutensor_handle,
+            &descB,
+            4,
+            eB,
+            sB,
+	    CUDA_C_64F,
+            ALIGNMENT_REQUIREMENT
+        ));
 
-	if(not is_PP){
-    		#pragma omp parallel for collapse(4)
-    		for(size_t a=0; a<NVIR; a++){
-    		for(size_t b=0; b<NVIR; b++){
-    		   for(size_t i=0; i<NOCC; i++){
-    		   for(size_t j=0; j<NOCC; j++){
-    		      TC contraction;
-    		     
-    		      if constexpr(sizeof(T)==sizeof(float)) contraction = make_cuComplex(0.0, 0.0);
-    		      if constexpr(sizeof(T)==sizeof(double)) contraction = make_cuDoubleComplex(0.0, 0.0);
+        cutensorTensorDescriptor_t descD;
+	CUTENSOR_CHECK(cutensorCreateTensorDescriptor(
+            cutensor_handle,
+            &descD,
+            4,
+            eD,
+            sD,
+	    CUDA_C_64F,
+            ALIGNMENT_REQUIREMENT
+        ));
 
-    		      for(size_t c=0; c<NVIR; c++){
-    		      for(size_t k=0; k<NOCC; k++){
-    		         size_t idA = k + b*NOCC + c*NOCC*NVIR + j*NOCC*NVIR*NVIR;
-    		         size_t idB = a + c*NVIR + i*NVIR*NVIR + k*NVIR*NVIR*NOCC;
-    		         if constexpr(sizeof(T)==sizeof(double)) contraction = cuCadd(
-    		            contraction,
-    		            cuCmul(A[idA], B[idB])
-    		         );
-    		         if constexpr(sizeof(T)==sizeof(float)) contraction = cuCaddf(
-    		            contraction,
-    		            cuCmulf(A[idA], B[idB])
-    		         );
-    		      }
-    		      }
-    		      size_t idC = a + b*NVIR + i*NVIR*NVIR + j*NVIR*NVIR*NOCC;
-    		      if constexpr(sizeof(T)==sizeof(double)) C[idC] = cuCmul(ALPHA, contraction);
-    		      if constexpr(sizeof(T)==sizeof(float)) C[idC] = cuCmulf(ALPHA, contraction);
-    		   }
-    		   }
-    		}
-    		}
-	} else{
-		#pragma omp parallel for collapse(4)
-   		for(size_t a=0; a<NVIR; a++){
-   		for(size_t b=0; b<NVIR; b++){
-   		   for(size_t i=0; i<NOCC; i++){
-   		   for(size_t j=0; j<NOCC; j++){
-    		      TC contraction;
-    		      if constexpr(sizeof(T)==sizeof(float)) contraction = make_cuComplex(0.0, 0.0);
-    		      if constexpr(sizeof(T)==sizeof(double)) contraction = make_cuDoubleComplex(0.0, 0.0);
+        std::vector<int32_t> iA_32 = std::vector<int32_t>(iA, iA + 4);
+        std::vector<int32_t> iB_32 = std::vector<int32_t>(iB, iB + 4);
+        std::vector<int32_t> iC_32 = std::vector<int32_t>(iC, iC + 4);
 
-   		      for(size_t c=0; c<NVIR; c++){
-   		      for(size_t d=0; d<NVIR; d++){
-   		         size_t idA = a + b*NVIR + c*NVIR*NVIR + d*NVIR*NVIR*NVIR;
-   		         size_t idB = c + d*NVIR + i*NVIR*NVIR + j*NVIR*NVIR*NOCC;
-    		         if constexpr(sizeof(T)==sizeof(double)) contraction = cuCadd(
-    		            contraction,
-    		            cuCmul(A[idA], B[idB])
-    		         );
-    		         if constexpr(sizeof(T)==sizeof(float)) contraction = cuCaddf(
-    		            contraction,
-    		            cuCmulf(A[idA], B[idB])
-    		         );
-   		      }
-   		      }
-   		      size_t idC = a + b*NVIR + i*NVIR*NVIR + j*NVIR*NVIR*NOCC;
-    		      if constexpr(sizeof(T)==sizeof(double)) C[idC] = cuCmul(ALPHA, contraction);
-    		      if constexpr(sizeof(T)==sizeof(float)) C[idC] = cuCmulf(ALPHA, contraction);
-   		   }
-   		   }
-   		}
-   		}
+        cutensorOperationDescriptor_t descContract;
+	CUTENSOR_CHECK(cutensorCreateContraction(
+            cutensor_handle,
+            &descContract,
+            descA,
+            iA_32.data(),
+            CUTENSOR_OP_IDENTITY,
+            descB,
+            iB_32.data(),
+            CUTENSOR_OP_IDENTITY,
+            descD,
+            iC_32.data(),
+            CUTENSOR_OP_IDENTITY,
+            descD,
+            iC_32.data(),
+            CUTENSOR_COMPUTE_DESC_8XINT8
+        ));
 
-	}
+        cutensorPlanPreference_t pref;
+	CUTENSOR_CHECK(cutensorCreatePlanPreference(
+            cutensor_handle,
+            &pref,
+            CUTENSOR_ALGO_DEFAULT,
+            CUTENSOR_JIT_MODE_NONE
+        ));
 
-    	CUDA_CHECK(cudaMemcpy(devC, C, nC * sizeof(TC), cudaMemcpyHostToDevice));
-    	printf("Finished CPU reference contraction!\n");
+        uint64_t workspaceSizeEstimate;
+        CUTENSOR_CHECK(cutensorEstimateWorkspaceSize(
+           cutensor_handle,
+           descContract,
+           pref,
+           CUTENSOR_WORKSPACE_DEFAULT,
+           &workspaceSizeEstimate
+       ));
 
-    	T max_rel_error = get_max_relative_error<T>((T*) devC, (T*) devD, nD*2);
-    	T max_abs_error = get_max_absolute_error<T>((T*) devC, (T*) devD, nD*2);
+        cutensorPlan_t planContract;
+        CUTENSOR_CHECK(cutensorCreatePlan(
+          cutensor_handle,
+          &planContract,
+          descContract,
+          pref,
+          workspaceSizeEstimate
+        ));
+
+	void* workspace;
+        CUDA_CHECK(cudaMalloc(&workspace, workspaceSizeEstimate));
+
+        CUTENSOR_CHECK(cutensorContract(
+          cutensor_handle,
+          planContract,
+          (void *) &ALPHA,
+          devA,
+          devB,
+          (void *) &BETA,
+          devC,
+          devC,
+          workspace,
+          workspaceSizeEstimate,
+          0
+	));
+
+        CUDA_CHECK(cudaFree(workspace));
+
+	CUTENSOR_CHECK(cutensorDestroyTensorDescriptor(descA));
+	CUTENSOR_CHECK(cutensorDestroyTensorDescriptor(descB));
+	CUTENSOR_CHECK(cutensorDestroyTensorDescriptor(descD));
+        CUTENSOR_CHECK(cutensorDestroyOperationDescriptor(descContract));
+	CUTENSOR_CHECK(cutensorDestroyPlanPreference(pref));
+	CUTENSOR_CHECK(cutensorDestroyPlan(planContract));
+	CUTENSOR_CHECK(cutensorDestroy(cutensor_handle));
+    	printf("Finished cuTENSOR reference contraction!\n");
+
+	// Copy data from device to host
+    	cuDoubleComplex* A = nullptr;
+    	cuDoubleComplex* B = nullptr;
+    	cuDoubleComplex* C = nullptr;
+    	cuDoubleComplex* D = nullptr;
+
+    	CUDA_CHECK(cudaMallocHost(&A, nA * sizeof(cuDoubleComplex)));
+    	CUDA_CHECK(cudaMallocHost(&B, nB * sizeof(cuDoubleComplex)));
+    	CUDA_CHECK(cudaMallocHost(&C, nD * sizeof(cuDoubleComplex)));
+    	CUDA_CHECK(cudaMallocHost(&D, nD * sizeof(cuDoubleComplex)));
+
+    	CUDA_CHECK(cudaMemcpy(A, devA, nA*sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost));
+    	CUDA_CHECK(cudaMemcpy(B, devB, nB*sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost));
+    	CUDA_CHECK(cudaMemcpy(C, devC, nC*sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost));
+    	CUDA_CHECK(cudaMemcpy(D, devD, nD*sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost));
+
+	// Error metrics
+    	T max_rel_error = get_max_relative_error((double*) devC, (double*) devD, nD*2);
+    	T max_abs_error = get_max_absolute_error((double*) devC, (double*) devD, nD*2);
     	printf("Max rel. error = %e\n", max_rel_error);
     	printf("Max abs. error = %e\n", max_abs_error);
 
 	for(int i=0;i<10;i++){
 		printf("%d) %f %f %f %f %f %f %f %f\n", i, A[i].x, A[i].y, B[i].x, B[i].y, C[i].x, C[i].y, D[i].x, D[i].y);
         }
-    	cudaFreeHost(A); cudaFreeHost(B); cudaFreeHost(D);
+    	cudaFreeHost(A); cudaFreeHost(B); cudaFreeHost(C); cudaFreeHost(D);
     	cudaFree(devA); cudaFree(devB); cudaFree(devC); cudaFree(devD);
 
     	TAPP_destroy_tensor_product(plan);
