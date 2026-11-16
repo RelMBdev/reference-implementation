@@ -6,14 +6,73 @@
 #include <cutt.h>
 #include <cuda_runtime.h>
 
+#if OZAKI_EMULATION_VERSION==2
+#include <complex>
+#include <gemmul8.hpp>
+#include <type_traits>
+#include <variant>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <map>
 #include <unordered_map>
 #include <vector>
+
+/* The number of GEMM in OS-II is related to the number of GEMM according to recommandations in README this repo: 
+* https://github.com/RIKEN-RCCS/GEMMul8
+* 30b5b5d01e96c0e4a490396d5a806e86bcc36581
+* formatted as effective bits / number of low-precision real matrix multiplications.
+*
+* num_moduli 	INT8-Real 	INT8-Complex 	FP8-Real 	FP8-Complex
+* 2 	          7 / 2 	   7 / 4 	    13 / 5 	  12 / 10
+* 3 	          11 / 3 	   11 / 6 	    18 / 7 	  16 / 15
+* 4 	          15 / 4 	   15 / 8 	    23 / 9 	  22 / 21
+* 5 	          19 / 5 	   19 / 10 	    28 / 11 	  27 / 28
+* 6 	          23 / 6 	   23 / 12 	    34 / 14 	  32 / 34
+* 7 	          27 / 7 	   27 / 14 	    39 / 17 	  35 / 37
+* 8 	          31 / 8 	   30 / 16 	    44 / 20 	  40 / 43
+* 9 	          35 / 9 	   34 / 18 	    48 / 22 	  46 / 49
+* 10 	          39 / 10 	   38 / 20 	    53 / 25 	  51 / 55
+* 11 	          43 / 11 	   41 / 22 	    58 / 28 	  56 / 61
+* 12 	          47 / 12 	   45 / 24 	    63 / 31 	  61 / 67
+* 13 	          51 / 13 	   48 / 26 	    68 / 34 	  66 / 73
+* 14 	          55 / 14 	   52 / 28 	    73 / 37 	  70 / 78
+* 15 	          58 / 15 	   55 / 30 	    78 / 40 	  75 / 84
+* 16 	          62 / 16 	   58 / 32 	    84 / 43 	  80 / 90
+* 17 	          66 / 17 	   62 / 34 	    89 / 46 	  85 / 96
+* 18 	          70 / 18 	   65 / 36 	    94 / 49 	  90 / 102
+* 19 	          73 / 19 	   68 / 38 	    99 / 52 	  95 / 108
+* 20 	          77 / 20 	   71 / 40 	    102 / 54 	  100 / 114
+*/
+
+#if OZAKI_EMULATION_VERSION==2
+std::map<int,int> OS_II_INT8_table = {
+   {2 , 7 },
+   {3 , 11},
+   {4 , 15},
+   {5 , 19},
+   {6 , 23},
+   {7 , 27},
+   {8 , 30},
+   {9 , 34},
+   {10, 38},
+   {11, 41},
+   {12, 45},
+   {13, 48},
+   {14, 52},
+   {15, 55},
+   {16, 58},
+   {17, 62},
+   {18, 65},
+   {19, 68},
+   {20, 71},
+};
+#endif
 
 // ===========================================================================
 // CUDA / cuTT error checks. Unlike the upstream my-ttgt macros these throw
@@ -37,42 +96,42 @@ static inline void cutt_check(cuttResult err)
 // ===========================================================================
 
 // Contracted ("bounded") labels of `mode`: those not present in `modeC`.
-static void get_bounded_indices(int** bounded, int* n_bounded,
-                                const int* mode, int rank,
-                                const int* modeC, int rankC)
+static void get_bounded_indices(int64_t** bounded, int* n_bounded,
+                                const int64_t* mode, int rank,
+                                const int64_t* modeC, int rankC)
 {
-    std::vector<int> tmp(rank);
+    std::vector<int64_t> tmp(rank);
     *n_bounded = 0;
     for (int i = 0; i < rank; i++)
     {
-        int idx = mode[i];
+        int64_t idx = mode[i];
         if (std::find(modeC, modeC + rankC, idx) == modeC + rankC)
             tmp[(*n_bounded)++] = idx;
     }
-    *bounded = new int[*n_bounded > 0 ? *n_bounded : 1];
+    *bounded = new int64_t[*n_bounded > 0 ? *n_bounded : 1];
     for (int i = 0; i < *n_bounded; i++)
         (*bounded)[i] = tmp[i];
 }
 
 // Free labels of `mode`: those also present in `modeC` (first n_free of them).
-static void get_free_indices(int* free_idx, int n_free,
-                             const int* mode, int rank,
-                             const int* modeC, int rankC)
+static void get_free_indices(int64_t* free_idx, int n_free,
+                             const int64_t* mode, int rank,
+                             const int64_t* modeC, int rankC)
 {
     int index = 0;
     for (int i = 0; i < rank && index < n_free; i++)
     {
-        int idx = mode[i];
+        int64_t idx = mode[i];
         if (std::find(modeC, modeC + rankC, idx) != modeC + rankC)
             free_idx[index++] = idx;
     }
 }
 
 // permutation[i] = position, in `mode`, of the label sitting at modeT[i].
-static void get_permutation(int* permutation, const int* mode,
-                            const int* modeT, int rank)
+static void get_permutation(int* permutation, const int64_t* mode,
+                            const int64_t* modeT, int rank)
 {
-    std::unordered_map<int, int> pos;
+    std::unordered_map<int64_t, int> pos;
     for (int i = 0; i < rank; i++)
         pos[modeT[i]] = i;
     for (int i = 0; i < rank; i++)
@@ -80,11 +139,11 @@ static void get_permutation(int* permutation, const int* mode,
 }
 
 // Prepend a value to a dim array (complex64 cuTT workaround). Caller deletes[].
-static int* prepend(const int* a, int rank, int value)
+static int64_t* prepend(const int64_t* a, int rank, int64_t value)
 {
-    int* out = new int[rank + 1];
+    int64_t* out = new int64_t[rank + 1];
     out[0] = value;
-    std::memcpy(out + 1, a, rank * sizeof(int));
+    std::memcpy(out + 1, a, rank * sizeof(int64_t));
     return out;
 }
 
@@ -123,7 +182,7 @@ static void make_scalar(TAPP_datatype type, double value, void* out)
 // the target layout). On a genuine cuTT failure the (reduced) parameters are
 // printed and an exception is thrown.
 // ===========================================================================
-static bool cutt_plan_squeezed(cuttHandle* plan, int rank, const int* dim,
+static bool cutt_plan_squeezed(cuttHandle* plan, int rank, const int64_t* dim,
                                const int* permutation, size_t sizeofType,
                                const char* which)
 {
@@ -134,7 +193,7 @@ static bool cutt_plan_squeezed(cuttHandle* plan, int rank, const int* dim,
         if (dim[i] != 1)
         {
             old_to_new[i] = new_rank++;
-            sdim.push_back(dim[i]);
+            sdim.push_back((int) dim[i]);
         }
 
     std::vector<int> sperm;
@@ -203,6 +262,181 @@ static bool scalar_is_nonzero(const void* storage, TAPP_datatype type)
 }
 
 // ===========================================================================
+// Dispatch pattern for interfacing with Ozaki-II project
+// The underlying GEMM assumes for simplicity that CUBLAS_OP = CUBLAS_OP_N for A and B.
+// During the Nvidia Idris-Hackathlon (2026), we identified cuBLAS GEMM as the bottleneck.
+// So the previous assumption is not a big performance loss.
+// ===========================================================================
+#if OZAKI_EMULATION_VERSION==2
+using CudaTypeVar = std::variant<
+    std::type_identity<float>,
+    std::type_identity<double>,
+    std::type_identity<cuComplex>,
+    std::type_identity<cuDoubleComplex>,
+>;
+
+CudaTypeVar get_cpp_datatype(TAPP_datatype dtype) {
+    switch (dtype) {
+        case TAPP_F32: return std::type_identity<float>{};
+        case TAPP_F64: return std::type_identity<double>{};
+        case TAPP_C32: return std::type_identity<cuComplex>{};
+        case TAPP_C64: return std::type_identity<cuDoubleComplex>{};
+    }
+    throw std::runtime_error("Unsuported value");
+}
+
+template <gemmul8::Backend BACKEND>
+void dispatch_gemmul8(
+           cublasHandle_t cublas,
+           CudaTypeVar typeC, 
+           cublasOperation_t transa,
+           cublasOperation_t transb,
+           size_t m, 
+           size_t n, 
+           size_t k,
+           const void* alpha, 
+           const void* A_d, 
+           size_t lda,
+           const void* B_d, 
+           size_t ldb,
+           const void* zero, 
+           void* devCT, 
+           size_t ldc,
+           int num_moduli, 
+           bool fastmode, 
+           void* work_rem, 
+           void* workA, 
+           void* workB,
+           bool enable_skip_scalA, 
+           bool enable_skip_scalB, 
+           bool skip_scalA, 
+           bool skip_scalB)
+{
+    std::visit([&]<typename typeC>(
+      std::type_identity<typeC>) {
+// Ozaki-II doesnt not have support for FP8 on H100
+#if OZAKI_II_COMPUTE_CAPABILITY>1000000
+         if constexpr(true) gemmul8::gemm<typeC, BACKEND>(
+           cublas,
+           transa, transb,
+           m, n, k,
+           (typeC*) alpha, (typeC*) A_d, lda,
+           (typeC*) B_d, ldb, (typeC*) zero,
+           (typeC*) devCT, ldc,
+           num_moduli,
+           fastmode, work_rem, workA, workB, enable_skip_scalA, enable_skip_scalB,
+           skip_scalA, skip_scalB
+        );
+#else
+         if (BACKEND==gemmul8::Backend::INT8){
+           gemmul8::gemm<typeC, BACKEND>(
+              cublas,
+              transa, transb,
+              m, n, k,
+              (typeC*) alpha, (typeC*) A_d, lda,
+              (typeC*) B_d, ldb, (typeC*) zero,
+              (typeC*) devCT, ldc,
+              num_moduli,
+              fastmode, work_rem, workA, workB, enable_skip_scalA, enable_skip_scalB,
+              skip_scalA, skip_scalB
+           );
+           return;
+         }
+         throw std::runtime_error("No implementation of Ozaki-II wityh FP8 support on H100 (compute capability 90)");
+#endif
+    }, typeC);
+}
+
+void dispatch_gemmul8(
+           cublasHandle_t cublas,
+           CudaTypeVar typeC, 
+           const gemmul8::Backend BACKEND,
+           cublasOperation_t transa,
+           cublasOperation_t transb,
+           size_t m, 
+           size_t n, 
+           size_t k,
+           const void* alpha, 
+           const void* A_d, 
+           size_t lda,
+           const void* B_d, 
+           size_t ldb,
+           const void* zero, 
+           void* devCT, 
+           size_t ldc,
+           int num_moduli, 
+           bool fastmode, 
+           void* work_rem, 
+           void* workA, 
+           void* workB,
+           bool enable_skip_scalA, 
+           bool enable_skip_scalB, 
+           bool skip_scalA, 
+           bool skip_scalB)
+{
+    switch(BACKEND){
+       case gemmul8::Backend::INT8:
+           dispatch_gemmul8<gemmul8::Backend::INT8>(
+              cublas,
+              typeC, 
+              transa,
+              transb,
+              m, 
+              n, 
+              k,
+              alpha, 
+              A_d, 
+              lda,
+              B_d, 
+              ldb,
+              zero, 
+              devCT, 
+              ldc,
+              num_moduli, 
+              fastmode, 
+              work_rem, 
+              workA, 
+              workB,
+              enable_skip_scalA, 
+              enable_skip_scalB, 
+              skip_scalA, 
+              skip_scalB
+          );
+          break;
+       case gemmul8::Backend::FP8:
+           dispatch_gemmul8<gemmul8::Backend::FP8>(
+              cublas,
+              typeC, 
+              transa,
+              transb,
+              m, 
+              n, 
+              k,
+              alpha, 
+              A_d, 
+              lda,
+              B_d, 
+              ldb,
+              zero, 
+              devCT, 
+              ldc,
+              num_moduli, 
+              fastmode, 
+              work_rem, 
+              workA, 
+              workB,
+              enable_skip_scalA, 
+              enable_skip_scalB, 
+              skip_scalA, 
+              skip_scalB
+          );
+          break;
+    }
+}
+
+#endif
+
+// ===========================================================================
 // Plan creation: the TTGT "optimize" step, computing the transpose plans and
 // GEMM configuration from the TAPP tensor descriptors and index strings.
 // ===========================================================================
@@ -220,7 +454,8 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
                                       TAPP_element_op op_D,
                                       TAPP_tensor_info D,
                                       const int64_t* idx_D,
-                                      TAPP_prectype prec)
+                                      TAPP_prectype prec
+                                      )
 {
     (void)idx_C;
     struct tensor_info* A_info = (struct tensor_info*)A;
@@ -270,10 +505,7 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
     // count is only consumed when built with EMULATION (CUDA >= 13) - otherwise
     // it stays 0 and the GEMM runs in plain FP64. The digits->mantissa-bits
     // conversion happens at execute.
-    p->prec_digits = 0;
-#if EMULATION
     p->prec_digits = tapp_prec_digits(prec);
-#endif
 
     int rankA = A_info->nmode;
     int rankB = B_info->nmode;
@@ -281,17 +513,17 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
 
     // Size with a floor of 1 so .data()/[0] are always valid even for scalars.
     auto sz = [](int r) { return r > 0 ? (size_t)r : (size_t)1; };
-    std::vector<int> dimA(sz(rankA)), modeA(sz(rankA));
-    std::vector<int> dimB(sz(rankB)), modeB(sz(rankB));
-    std::vector<int> dimC(sz(rankC)), modeC(sz(rankC));
-    for (int i = 0; i < rankA; i++) { dimA[i] = (int)A_info->extents[i]; modeA[i] = (int)idx_A[i]; }
-    for (int i = 0; i < rankB; i++) { dimB[i] = (int)B_info->extents[i]; modeB[i] = (int)idx_B[i]; }
-    for (int i = 0; i < rankC; i++) { dimC[i] = (int)D_info->extents[i]; modeC[i] = (int)idx_D[i]; }
+    std::vector<int64_t> dimA(sz(rankA)), modeA(sz(rankA));
+    std::vector<int64_t> dimB(sz(rankB)), modeB(sz(rankB));
+    std::vector<int64_t> dimC(sz(rankC)), modeC(sz(rankC));
+    for (int i = 0; i < rankA; i++) { dimA[i] = A_info->extents[i]; modeA[i] = idx_A[i]; }
+    for (int i = 0; i < rankB; i++) { dimB[i] = B_info->extents[i]; modeB[i] = idx_B[i]; }
+    for (int i = 0; i < rankC; i++) { dimC[i] = D_info->extents[i]; modeC[i] = idx_D[i]; }
 
     p->m = p->n = p->k = p->lda = p->ldb = p->ldc = 1;
 
     // --- BASELINE TTGT index scheme ---
-    int* bounded = nullptr;
+    int64_t* bounded = nullptr;
     int n_bounded = 0;
     if (A_info->elements > B_info->elements)
         get_bounded_indices(&bounded, &n_bounded, modeA.data(), rankA, modeC.data(), rankC);
@@ -314,31 +546,31 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
         return tapp_error(TAPP_ERROR_TYPE_TAPP, TAPP_ERR_UNSUPPORTED_DATATYPE);
     }
 
-    std::vector<int> freeA(n_freeA > 0 ? n_freeA : 1);
+    std::vector<int64_t> freeA(n_freeA > 0 ? n_freeA : 1);
     get_free_indices(freeA.data(), n_freeA, modeA.data(), rankA, modeC.data(), rankC);
-    std::vector<int> freeB(n_freeB > 0 ? n_freeB : 1);
+    std::vector<int64_t> freeB(n_freeB > 0 ? n_freeB : 1);
     get_free_indices(freeB.data(), n_freeB, modeB.data(), rankB, modeC.data(), rankC);
 
     // modeAT/modeBT always receive exactly rankA/rankB labels. modeCT receives
     // n_freeA+n_freeB, which EXCEEDS rankC when a Hadamard index is shared (it
     // appears in both free sets); size it to the real write length so the copy
     // never overflows. get_permutation reads only the first rankC entries.
-    std::vector<int> modeAT(sz(rankA)), modeBT(sz(rankB));
-    std::vector<int> modeCT(std::max((size_t)(n_freeA + n_freeB), sz(rankC)));
+    std::vector<int64_t> modeAT(sz(rankA)), modeBT(sz(rankB));
+    std::vector<int64_t> modeCT(std::max((size_t)(n_freeA + n_freeB), sz(rankC)));
     std::vector<int> permA(sz(rankA)), permB(sz(rankB)), permC(sz(rankC));
-    std::vector<int> dimCT(sz(rankC));
+    std::vector<int64_t> dimCT(sz(rankC));
 
     // Tensor A: keep the leading index in place where possible (col-major).
     if (std::find(freeA.data(), freeA.data() + n_freeA, modeA[0]) != freeA.data() + n_freeA)
     {
-        std::memcpy(modeAT.data(), freeA.data(), n_freeA * sizeof(int));
-        std::memcpy(modeAT.data() + n_freeA, bounded, n_bounded * sizeof(int));
+        std::memcpy(modeAT.data(), freeA.data(), n_freeA * sizeof(int64_t));
+        std::memcpy(modeAT.data() + n_freeA, bounded, n_bounded * sizeof(int64_t));
         p->transa = CUBLAS_OP_N;
     }
     else
     {
-        std::memcpy(modeAT.data(), bounded, n_bounded * sizeof(int));
-        std::memcpy(modeAT.data() + n_bounded, freeA.data(), n_freeA * sizeof(int));
+        std::memcpy(modeAT.data(), bounded, n_bounded * sizeof(int64_t));
+        std::memcpy(modeAT.data() + n_bounded, freeA.data(), n_freeA * sizeof(int64_t));
         p->transa = CUBLAS_OP_T;
     }
     get_permutation(permA.data(), modeAT.data(), modeA.data(), rankA);
@@ -358,14 +590,14 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
     // Tensor B.
     if (std::find(freeB.data(), freeB.data() + n_freeB, modeB[0]) != freeB.data() + n_freeB)
     {
-        std::memcpy(modeBT.data(), freeB.data(), n_freeB * sizeof(int));
-        std::memcpy(modeBT.data() + n_freeB, bounded, n_bounded * sizeof(int));
+        std::memcpy(modeBT.data(), freeB.data(), n_freeB * sizeof(int64_t));
+        std::memcpy(modeBT.data() + n_freeB, bounded, n_bounded * sizeof(int64_t));
         p->transb = CUBLAS_OP_T;
     }
     else
     {
-        std::memcpy(modeBT.data(), bounded, n_bounded * sizeof(int));
-        std::memcpy(modeBT.data() + n_bounded, freeB.data(), n_freeB * sizeof(int));
+        std::memcpy(modeBT.data(), bounded, n_bounded * sizeof(int64_t));
+        std::memcpy(modeBT.data() + n_bounded, freeB.data(), n_freeB * sizeof(int64_t));
         p->transb = CUBLAS_OP_N;
     }
     get_permutation(permB.data(), modeBT.data(), modeB.data(), rankB);
@@ -381,8 +613,8 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
     }
 
     // Tensor C/D: assume output order [free(A), free(B)].
-    std::memcpy(modeCT.data(), freeA.data(), n_freeA * sizeof(int));
-    std::memcpy(modeCT.data() + n_freeA, freeB.data(), n_freeB * sizeof(int));
+    std::memcpy(modeCT.data(), freeA.data(), n_freeA * sizeof(int64_t));
+    std::memcpy(modeCT.data() + n_freeA, freeB.data(), n_freeB * sizeof(int64_t));
     get_permutation(permC.data(), modeC.data(), modeCT.data(), rankC);
     for (int i = 0; i < rankC; i++) dimCT[permC[i]] = dimC[i];
     for (int i = 0; i < n_freeA; i++) p->ldc *= dimCT[i];
@@ -395,15 +627,16 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
 
     // cuTT plan inputs (A and B transpose from their own layout, C from CT).
     int rA = rankA, rB = rankB, rC = rankC;
-    int* dimA_p = dimA.data();   int* permA_p = permA.data();
-    int* dimB_p = dimB.data();   int* permB_p = permB.data();
-    int* dimCT_p = dimCT.data(); int* permC_p = permC.data();
+    int64_t* dimA_p = dimA.data();   int* permA_p = permA.data();
+    int64_t* dimB_p = dimB.data();   int* permB_p = permB.data();
+    int64_t* dimCT_p = dimCT.data(); int* permC_p = permC.data();
     size_t es_A = sizeof_datatype(p->type_A);
     size_t es_B = sizeof_datatype(p->type_B);
     size_t es_C = sizeof_datatype(p->type_D);
 
     // complex64 needs an extra leading dimension of 2 (cuTT element-size limit).
-    int *cA = nullptr, *cpA = nullptr, *cB = nullptr, *cpB = nullptr, *cC = nullptr, *cpC = nullptr;
+    int64_t *cA = nullptr, *cB = nullptr, *cC = nullptr;
+    int *cpA = nullptr, *cpB = nullptr, *cpC = nullptr;
     if (p->type_A == TAPP_C64) { rA++; cA = prepend(dimA.data(), rankA, 2); dimA_p = cA; cpA = shift_permutation(permA.data(), rankA); permA_p = cpA; es_A /= 2; }
     if (p->type_B == TAPP_C64) { rB++; cB = prepend(dimB.data(), rankB, 2); dimB_p = cB; cpB = shift_permutation(permB.data(), rankB); permB_p = cpB; es_B /= 2; }
     if (p->type_D == TAPP_C64) { rC++; cC = prepend(dimCT.data(), rankC, 2); dimCT_p = cC; cpC = shift_permutation(permC.data(), rankC); permC_p = cpC; es_C /= 2; }
@@ -513,36 +746,117 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
 
         cuda_check(cudaMalloc(&devCT, bytes_D));
 
-#if EMULATION
+        unsigned char zero[16];
+        make_scalar(tD, 0.0, zero);
+        cublasStatus_t stat;
+        TAPP_error error;
+
+#if OZAKI_EMULATION_VERSION!=2
         // Configure cuBLAS fixed-point FP64 emulation for the requested number
         // of decimal digits (variable mantissa size). bits = ceil(log2(10)*d).
+#if OZAKI_EMULATION_VERSION==1
         if (p->prec_digits > 0)
         {
-	    bool* TAPP_EMULATION_STRATEGY_PERFORMANT;
-	    TAPP_error error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_STRATEGY_PERFORMANT, (void**)&TAPP_EMULATION_STRATEGY_PERFORMANT);
-            if(*TAPP_EMULATION_STRATEGY_PERFORMANT)
-	    	{cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);}
-	    else
-	    	{ cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_EAGER);}
+	        int* TAPP_EMULATION_STRATEGY;
+	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_STRATEGY, (void**)&TAPP_EMULATION_STRATEGY);
+           if(*TAPP_EMULATION_STRATEGY == TAPP_EMULATION_STRATEGY_PERFORMANT) {cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_PERFORMANT);}
+	        else { cublasSetEmulationStrategy(cublas, CUBLAS_EMULATION_STRATEGY_EAGER);}
 
-	    bool* TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC;
-	    error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL_DYNAMIC, (void**)&TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC);
-            if(*TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC) {cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);}
-	    else{cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_FIXED);}
+	        int* TAPP_EMULATION_MANTISSA_CONTROL;
+	        error = TAPP_attr_get(p->handle, ATTR_KEY_EMULATION_MANTISSA_CONTROL, (void**)&TAPP_EMULATION_MANTISSA_CONTROL);
+           if(*TAPP_EMULATION_MANTISSA_CONTROL == TAPP_EMULATION_MANTISSA_CONTROL_DYNAMIC) {cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);}
+	        else{cublasSetFixedPointEmulationMantissaControl(cublas, CUDA_EMULATION_MANTISSA_CONTROL_FIXED);}
 
             int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
             cublasSetFixedPointEmulationMaxMantissaBitCount(cublas, bits);
         }
 #endif
 
-        unsigned char zero[16];
-        make_scalar(tD, 0.0, zero);
-        cublasStatus_t stat = cublasGemmEx(
+        stat = cublasGemmEx_64(
             cublas, p->transa, p->transb, p->m, p->n, p->k,
             alpha, p->transposeA ? devAT : A_d, get_cuda_datatype(p->type_A), p->lda,
             p->transposeB ? devBT : B_d, get_cuda_datatype(p->type_B), p->ldb,
             zero, devCT, get_cuda_datatype(tD), p->ldc, p->compute_type, CUBLAS_GEMM_DEFAULT);
         if (stat != CUBLAS_STATUS_SUCCESS) throw std::runtime_error("cublasGemmEx failed");
+#else
+        // Configure Ozaki-II fixed-point FP64 emulation
+        int TAPP_EMULATION_NUM_GEMM = 16;  
+        if (p->prec_digits > 0)
+        {
+           int bits = (int)std::ceil(std::log2(10.0) * p->prec_digits);
+           for(const auto& [num_moduli, effective_bits]: OS_II_INT8_table){
+              if(effective_bits>=bits){
+                 TAPP_EMULATION_NUM_GEMM = num_moduli;  
+                 break;
+              }
+           }
+        }
+
+        const bool fastmode = false;
+        const bool enable_skip_scalA = false;
+        const bool enable_skip_scalB = false;
+        const bool skip_scalA = false;
+        const bool skip_scalB = false;
+        // TODO: add support for FP8
+        const gemmul8::Backend BACKEND = gemmul8::Backend::INT8;
+
+        // Estimate size and create workspace 
+        size_t worksizeA, worksizeB;
+        size_t worksize;
+        if(is_complex(p->type_A) or is_complex(p->type_B) or is_complex(p->type_D)){
+          worksize = gemmul8::workSize<true, BACKEND, gemmul8::Func::gemm>(
+             p->m, 
+             p->n, 
+             p->k, 
+             TAPP_EMULATION_NUM_GEMM,
+             enable_skip_scalA, enable_skip_scalB, &worksizeA, &worksizeB);
+        }
+        else{
+          worksize = gemmul8::workSize<false, BACKEND, gemmul8::Func::gemm>(
+             p->m, 
+             p->n, 
+             p->k, 
+             TAPP_EMULATION_NUM_GEMM,
+             enable_skip_scalA, enable_skip_scalB, &worksizeA, &worksizeB);
+        }
+
+        void *work;
+        cudaMalloc(&work, worksize);
+   
+        const size_t offsetA = worksizeA;
+        const size_t offsetB = worksizeB;
+        
+        int8_t *workA    = reinterpret_cast<int8_t *>(work);
+        int8_t *workB    = workA + offsetA;                 
+        int8_t *work_rem = workB + offsetB;
+        
+        // Dispatch Ozaki-II GEMM
+        TAPP_prectype typeA = p->type_A;
+        TAPP_prectype typeB = p->type_B;
+        TAPP_prectype typeC = p->type_D;
+
+        if(
+            not(
+                typeA==typeB and 
+                typeA==typeC and 
+                typeC==typeB
+            )
+        ) throw std::runtime_error("Ozaki-II does not support tensors of different datatype");
+        dispatch_gemmul8(
+           cublas,
+           get_cpp_datatype(typeC), 
+           BACKEND,
+           p->transa, p->transb,
+           p->m, p->n, p->k,
+           alpha, p->transposeA? devAT: A_d, p->lda,
+           p->transposeB? devBT: B_d, p->ldb,
+           zero, devCT, p->ldc,
+           TAPP_EMULATION_NUM_GEMM, fastmode, (void*)work_rem, (void*)workA, (void*)workB,
+           enable_skip_scalA, enable_skip_scalB, skip_scalA, skip_scalB
+        );
+
+        cudaFree(work);
+#endif
 
         if (p->transposeA) { cuda_check(cudaFree(devAT)); devAT = nullptr; }
         if (p->transposeB) { cuda_check(cudaFree(devBT)); devBT = nullptr; }
@@ -560,25 +874,25 @@ TAPP_error TAPP_execute_product(TAPP_tensor_product plan,
             switch (tD)
             {
             case TAPP_F64:
-                stat = cublasDgeam(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
+                stat = cublasDgeam_64(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
                     (const double*)beta, (const double*)D_d, p->m,
                     (const double*)one, (const double*)devC_tmp, p->m,
                     (double*)D_d, p->m);
                 break;
             case TAPP_F32:
-                stat = cublasSgeam(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
+                stat = cublasSgeam_64(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
                     (const float*)beta, (const float*)D_d, p->m,
                     (const float*)one, (const float*)devC_tmp, p->m,
                     (float*)D_d, p->m);
                 break;
             case TAPP_C64:
-                stat = cublasZgeam(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
+                stat = cublasZgeam_64(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
                     (const cuDoubleComplex*)beta, (const cuDoubleComplex*)D_d, p->m,
                     (const cuDoubleComplex*)one, (const cuDoubleComplex*)devC_tmp, p->m,
                     (cuDoubleComplex*)D_d, p->m);
                 break;
             case TAPP_C32:
-                stat = cublasCgeam(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
+                stat = cublasCgeam_64(cublas, CUBLAS_OP_N, CUBLAS_OP_N, p->m, p->n,
                     (const cuComplex*)beta, (const cuComplex*)D_d, p->m,
                     (const cuComplex*)one, (const cuComplex*)devC_tmp, p->m,
                     (cuComplex*)D_d, p->m);

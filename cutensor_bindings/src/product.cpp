@@ -64,7 +64,7 @@ TAPP_error TAPP_create_tensor_product(TAPP_tensor_product* plan,
         &permutation_desc,
         *((struct tensor_info*)D)->desc, cuidx_D.data(), translate_operator(op_D),
         *((struct tensor_info*)D)->desc, cuidx_D.data(),
-        translate_prectype(prec, ((tensor_info*)D)->type));
+        translate_prectype_permutation(prec, ((tensor_info*)D)->type));
     if (err != CUTENSOR_STATUS_SUCCESS) { permutation_desc = nullptr; goto fail; }
 
     err = cutensorOperationDescriptorGetAttribute(*handle_struct->libhandle,
