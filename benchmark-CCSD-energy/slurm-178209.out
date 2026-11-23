@@ -1,0 +1,4 @@
+ERROR: Unable to locate a modulefile for 'slurm/slurm/24.11'
+Loading nvhpc-hpcx-cuda13/26.1
+  Loading requirement: hpcx
+[2026-11-18T18:57:53.152] error: *** JOB 178209 ON dalianvl05 CANCELLED AT 2026-11-18T18:57:53 DUE to SIGNAL Terminated ***

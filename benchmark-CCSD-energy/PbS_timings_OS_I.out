@@ -1,0 +1,15 @@
+PREC DIGITS = 5
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 24800
+Reading data from file t1.h5 with n = 24800
+Reading data from file V.h5 with n = 615040000
+Reading data from file tau.h5 with n = 615040000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Finished TAPP product
