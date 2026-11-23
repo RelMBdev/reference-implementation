@@ -36,7 +36,7 @@ TAPP_error TAPP_attr_clear(TAPP_attr attr, TAPP_key key)
     switch (key)
     {
     case ATTR_KEY_USE_DEVICE_MEMORY:
-        *(bool*)handle_struct->attributes[key] = false;
+        *(bool*)handle_struct->attributes[key] = true;
         break;
     case ATTR_KEY_EMULATION_STRATEGY:
         *(int*)handle_struct->attributes[key] = 0;

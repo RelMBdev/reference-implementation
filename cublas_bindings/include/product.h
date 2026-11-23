@@ -4,7 +4,7 @@
 #include <tapp/product.h>
 
 #include <cublas_v2.h>
-#include <cutt.h>
+#include <cutensor.h>
 
 #include <cstdint>
 
@@ -29,7 +29,7 @@ struct product_plan
     // Transpose plans. transposeX == false means tensor X is already in the
     // layout the GEMM expects, so it is fed to the GEMM unchanged.
     bool transposeA, transposeB, transposeC;
-    cuttHandle planA, planB, planC;
+    cutensorPlan_t planA, planB, planC, planD;
 
     // GEMM configuration (CT = alpha * op(A) * op(B)).
     cublasOperation_t transa, transb;
