@@ -4,6 +4,7 @@
 #include <tapp/error.h>
 
 #include <cublas_v2.h>
+#include <cutensor.h>
 #include <cuda_runtime.h>
 
 #include <cstring>
@@ -11,5 +12,6 @@
 
 inline TAPP_error tapp_error(cudaError_t e)    { return e == cudaSuccess ? TAPP_SUCCESS : tapp_error(TAPP_ERROR_TYPE_CUDA, (int)e); }
 inline TAPP_error tapp_error(cublasStatus_t e) { return e == CUBLAS_STATUS_SUCCESS ? TAPP_SUCCESS : tapp_error(TAPP_ERROR_TYPE_CUBLAS, (int)e); }
+inline TAPP_error tapp_error(cutensorStatus_t e) { return e == CUTENSOR_STATUS_SUCCESS ? TAPP_SUCCESS : tapp_error(TAPP_ERROR_TYPE_CUTENSOR, (int)e); }
 
 #endif /* TAPP_REF_IMPL_CUBLAS_BINDINGS_ERROR_H_ */

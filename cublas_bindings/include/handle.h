@@ -4,6 +4,7 @@
 #include <tapp/handle.h>
 
 #include <cublas_v2.h>
+#include <cutensor.h>
 
 #include "error.h"
 
@@ -13,6 +14,7 @@
 struct handle
 {
     cublasHandle_t cublas;
+    cutensorHandle_t cutensor;
     intptr_t* attributes;
 };
 

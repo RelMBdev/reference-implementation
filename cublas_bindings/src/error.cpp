@@ -20,8 +20,11 @@ size_t TAPP_explain_error(TAPP_error error,
     case TAPP_ERROR_TYPE_CUDA:
         str = std::string("[CUDA Error]: ") + cudaGetErrorString(static_cast<cudaError_t>(error.code));
         break;
-    case TAPP_ERROR_TYPE_CUBLAS:
+    case TAPP_ERROR_TYPE_CUTENSOR:
         str = std::string("[cuBLAS Status]: ") + cublasGetStatusString(static_cast<cublasStatus_t>(error.code));
+        break;
+    case TAPP_ERROR_TYPE_CUBLAS:
+        str = std::string("[cuTENSOR Status]: ") + cutensorGetErrorString(static_cast<cutensorStatus_t>(error.code));
         break;
     default:
         str = "Unknown error type.";

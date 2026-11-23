@@ -1,8 +1,7 @@
 # cuBLAS/TTGT bindings for TAPP.
 #
 # Implements the TAPP tensor-product API directly in src/ using the TTGT
-# (transpose-transpose-GEMM-transpose) scheme: cuBLAS GEMM plus cuTT transposes.
-# cuBLAS ships with the CUDA toolkit; cuTT does not and is located via CUTT_ROOT.
+# (transpose-transpose-GEMM-transpose) scheme: cuBLAS GEMM plus cuTENSOR transposes.
 
 # EMULATION enables the cuBLAS fixed-point FP64 emulation path (variable mantissa
 # size, driven by the requested precision digits). Off by default; requires
@@ -11,19 +10,31 @@ if(NOT DEFINED TAPP_OZAKI_EMULATION_VERSION)
   set(TAPP_OZAKI_EMULATION_VERSION 0)
 endif()
 
-# cuTT (transpose library) - not part of the CUDA toolkit.
-if(NOT TARGET cutt)
-  if(NOT DEFINED CUTT_ROOT AND DEFINED ENV{CUTT_ROOT})
-    set(CUTT_ROOT $ENV{CUTT_ROOT})
+# cuTENSOR is not part of the CUDA toolkit; look for it separately
+if(NOT TARGET cutensor::cutensor)
+  find_path(CUTENSOR_INCLUDE_DIR
+    NAMES cutensor.h
+    HINTS ${CUTENSOR_ROOT} ENV CUTENSOR_ROOT
+          ${CUDAToolkit_LIBRARY_ROOT}
+    PATH_SUFFIXES include
+  )
+  find_library(CUTENSOR_LIBRARY
+    NAMES cutensor
+    HINTS ${CUTENSOR_ROOT} ENV CUTENSOR_ROOT
+          ${CUDAToolkit_LIBRARY_ROOT}
+    PATH_SUFFIXES lib lib64 lib/${CMAKE_LIBRARY_ARCHITECTURE}
+  )
+
+  if(NOT CUTENSOR_INCLUDE_DIR OR NOT CUTENSOR_LIBRARY)
+    message(FATAL_ERROR "cuTENSOR not found; set CUTENSOR_ROOT to the cuTENSOR installation prefix")
   endif()
-  if(NOT CUTT_ROOT)
-    message(FATAL_ERROR "cuTT not found; set CUTT_ROOT to the cuTT installation prefix")
-  endif()
-  message(STATUS "Using cuTT from: ${CUTT_ROOT}")
-  add_library(cutt STATIC IMPORTED GLOBAL)
-  set_target_properties(cutt PROPERTIES
-    IMPORTED_LOCATION "${CUTT_ROOT}/lib/libcutt.a"
-    INTERFACE_INCLUDE_DIRECTORIES "${CUTT_ROOT}/include"
+  message(STATUS "Found cuTENSOR: ${CUTENSOR_LIBRARY}")
+  message(STATUS "cuTENSOR include: ${CUTENSOR_INCLUDE_DIR}")
+
+  add_library(cutensor::cutensor UNKNOWN IMPORTED GLOBAL)
+  set_target_properties(cutensor::cutensor PROPERTIES
+    IMPORTED_LOCATION "${CUTENSOR_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${CUTENSOR_INCLUDE_DIR}"
   )
 endif()
 
@@ -90,7 +101,7 @@ if(TAPP_OZAKI_EMULATION_VERSION STREQUAL "2")
        OZAKI_II
        CUDA::cudart
        CUDA::cublas
-       cutt
+       cutensor::cutensor
    )
 else()
    target_link_libraries(tapp-cublas
@@ -99,7 +110,7 @@ else()
      PRIVATE
        CUDA::cudart
        CUDA::cublas
-       cutt
+       cutensor::cutensor
    )
 endif()
 
