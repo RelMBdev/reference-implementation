@@ -1,0 +1,355 @@
+PREC DIGITS = 5
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 2.273488e-04
+Max abs. error = 1.721432e+05
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539595e+08, 6.982260e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 6
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 2.273488e-04
+Max abs. error = 1.721432e+05
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539595e+08, 6.982260e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 7
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 3.088198e-06
+Max abs. error = 2.338311e+03
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539322e+08, 6.999297e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 8
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 3.088198e-06
+Max abs. error = 2.338311e+03
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539322e+08, 6.999297e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 9
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 3.088198e-06
+Max abs. error = 2.338311e+03
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539322e+08, 6.999297e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 10
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 4.324936e-08
+Max abs. error = 3.274740e+01
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999295e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 11
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 4.324936e-08
+Max abs. error = 3.274740e+01
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999295e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 12
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.211794e-10
+Max abs. error = 9.175418e-02
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 13
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.211794e-10
+Max abs. error = 9.175418e-02
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 14
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.211794e-10
+Max abs. error = 9.175418e-02
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 15
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.844152e-12
+Max abs. error = 1.396349e-03
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 16
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.844152e-12
+Max abs. error = 1.396349e-03
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 17
+PREC type not available
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.039129e-15
+Max abs. error = 7.868039e-07
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 18
+PREC type not available
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.039129e-15
+Max abs. error = 7.868039e-07
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 19
+PREC type not available
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.039129e-15
+Max abs. error = 7.868039e-07
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 20
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor copy to GPU
+Generate random tensors!
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.922194e-15
+Max abs. error = 1.455440e-06
+Max rel. error with DIRAC C64 = 1.000000e+00
+Max abs. error with DIRAC C64 = 7.571765e+08
+Values:
+TAPP result: (-7.539345e+08, 6.999292e+07)
+cuTENSOR result: (-7.539345e+08, 6.999292e+07)
+DIRAC result: -2.587381e-01

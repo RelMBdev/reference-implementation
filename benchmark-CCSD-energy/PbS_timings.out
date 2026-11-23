@@ -1,0 +1,96 @@
+PREC DIGITS = 5
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Finished TAPP product
+Finished cuTENSOR product and it took 898.825989 ms (average over 100 repetitions)
+PREC DIGITS = 6
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Finished TAPP product
+Finished cuTENSOR product and it took 907.879639 ms (average over 100 repetitions)
+PREC DIGITS = 7
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Finished TAPP product
+Finished cuTENSOR product and it took 1230.556885 ms (average over 100 repetitions)
+PREC DIGITS = 8
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Finished TAPP product
+Finished cuTENSOR product and it took 1228.677368 ms (average over 100 repetitions)
+PREC DIGITS = 9
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Finished TAPP product
+Finished cuTENSOR product and it took 1228.527832 ms (average over 100 repetitions)
+PREC DIGITS = 10
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Finished TAPP product
+Finished cuTENSOR product and it took 1575.328735 ms (average over 100 repetitions)

@@ -4,7 +4,7 @@
 #include <tapp/product.h>
 
 #include <cublas_v2.h>
-#include <cutt.h>
+#include <cutensor.h>
 
 #include <cstdint>
 
@@ -29,7 +29,7 @@ struct product_plan
     // Transpose plans. transposeX == false means tensor X is already in the
     // layout the GEMM expects, so it is fed to the GEMM unchanged.
     bool transposeA, transposeB, transposeC;
-    cuttHandle planA, planB, planC;
+    cutensorPlan_t planA, planB, planC, planD;
 
     // GEMM configuration (CT = alpha * op(A) * op(B)).
     cublasOperation_t transa, transb;
@@ -37,7 +37,7 @@ struct product_plan
     cublasComputeType_t compute_type;
 
     // Requested decimal digits of precision for cuBLAS fixed-point FP64
-    // emulation (0 = emulation off). Only meaningful when built with EMULATION
+    // emulation (0 = emulation off). Only meaningful when built with OZAKI_EMULATION_VERSION=1
     // and for F64/C64 outputs; converted to a max mantissa bit count at execute.
     int prec_digits;
 

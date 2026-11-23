@@ -1,0 +1,419 @@
+PREC DIGITS = 5
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 9.250840e-07
+Max abs. error = 2.393544e-07
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587378e-01, 5.423240e-10)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 6
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 9.250840e-07
+Max abs. error = 2.393544e-07
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587378e-01, 5.423240e-10)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 7
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 3.910827e-09
+Max abs. error = 1.011880e-09
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587380e-01, -3.394584e-13)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 8
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 3.910827e-09
+Max abs. error = 1.011880e-09
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587380e-01, -3.394584e-13)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 9
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 3.910827e-09
+Max abs. error = 1.011880e-09
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587380e-01, -3.394584e-13)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 10
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.441095e-11
+Max abs. error = 3.728660e-12
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, 1.417919e-14)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 11
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.441095e-11
+Max abs. error = 3.728660e-12
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, 1.417919e-14)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 12
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.057711e-13
+Max abs. error = 2.736701e-14
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.135162e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 13
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.057711e-13
+Max abs. error = 2.736701e-14
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.135162e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 14
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.057711e-13
+Max abs. error = 2.736701e-14
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.135162e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 15
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.287281e-15
+Max abs. error = 3.330687e-16
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.161845e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 16
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.287281e-15
+Max abs. error = 3.330687e-16
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.161845e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 17
+PREC type not available
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 6.436373e-16
+Max abs. error = 1.665335e-16
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.162968e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 18
+PREC type not available
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 6.436373e-16
+Max abs. error = 1.665335e-16
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.162968e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 19
+PREC type not available
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 6.436373e-16
+Max abs. error = 1.665335e-16
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.162968e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01
+PREC DIGITS = 20
+EMULATION_STRATEGY_EAGER
+EMULATION_MANTISSA_CONTROL_FIXED
+Before tensor info
+Before tensor plans
+Before tensor executor
+Before tensor alloc on CPU
+Before tensor read from HDF5 files
+Reading data from file Fov.h5 with n = 4000
+Reading data from file t1.h5 with n = 4000
+Reading data from file V.h5 with n = 16000000
+Reading data from file tau.h5 with n = 16000000
+Before tensor copy to GPU
+Before tensor copy to GPU for TAPP
+Before execute product 1
+Before execute product 2
+Finished TAPP product
+Error:
+Max rel. error = 1.287312e-15
+Max abs. error = 3.330767e-16
+Max rel. error with DIRAC C64 = 4.620856e-15
+Max abs. error with DIRAC C64 = 1.195591e-15
+Values:
+TAPP result: (-2.587381e-01, -1.160375e-15)
+cuTENSOR result: (-2.587381e-01, -1.162928e-15)
+DIRAC result: -2.587381e-01

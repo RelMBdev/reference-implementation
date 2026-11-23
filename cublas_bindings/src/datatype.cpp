@@ -8,6 +8,24 @@ int tapp_prec_digits(TAPP_prectype prec)
     return 0;
 }
 
+cutensorComputeDescriptor_t translate_prectype_permutation(TAPP_datatype datatype)
+{
+    switch (datatype)
+    {
+    case TAPP_F32:
+    case TAPP_C32:
+        return CUTENSOR_COMPUTE_DESC_32F;
+        break;
+    case TAPP_F64:
+    case TAPP_C64:
+        return CUTENSOR_COMPUTE_DESC_64F;
+        break;
+    default: // TODO: Default should probably be an error
+        return CUTENSOR_COMPUTE_DESC_32F;
+        break;
+    }
+}
+
 cublasComputeType_t translate_prectype(TAPP_prectype prec, TAPP_datatype datatype)
 {
     // Variable-precision (digit-count) types map to cuBLAS fixed-point FP64
@@ -15,7 +33,7 @@ cublasComputeType_t translate_prectype(TAPP_prectype prec, TAPP_datatype datatyp
     // plain FP64, i.e. full precision ignoring the requested digit reduction.
     if (tapp_prec_digits(prec) > 0)
     {
-#if EMULATION
+#if OZAKI_EMULATION_VERSION==1
         return CUBLAS_COMPUTE_64F_EMULATED_FIXEDPOINT;
 #else
         return CUBLAS_COMPUTE_64F;
@@ -76,5 +94,22 @@ size_t sizeof_datatype(TAPP_datatype type)
         return sizeof(std::complex<double>);
     default:
         return sizeof(float);
+    }
+}
+
+bool is_complex(TAPP_datatype type)
+{
+    switch (type)
+    {
+    case TAPP_F32:
+        return false;
+    case TAPP_F64:
+        return false;
+    case TAPP_C32:
+        return true;
+    case TAPP_C64:
+        return true;
+    default:
+        return false;
     }
 }
